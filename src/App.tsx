@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { TitleBar } from './components/TitleBar';
-import { StatusBar } from './components/StatusBar';
+import { NavTabs } from './components/NavTabs';
+import { FooterBar } from './components/FooterBar';
 import { AdvancedPrintTab } from './components/AdvancedPrintTab';
 import { ScannerTab } from './components/ScannerTab';
 import { PrintProgressModal } from './components/PrintProgressModal';
 import { CodeExplorerModal } from './components/CodeExplorerModal';
+import { SettingsPage } from './components/SettingsPage';
+import { InstallerWizard } from './components/InstallerWizard';
+import { SplashWelcome } from './components/SplashWelcome';
+import { useSettings } from './context/SettingsContext';
 import {
   INSTALLED_PRINTERS,
   INSTALLED_SCANNERS,
@@ -22,12 +27,18 @@ import {
 } from './types';
 
 export function App() {
+  const { installed, setInstalled, uiScale } = useSettings();
+
+  // شاشات التثبيت والترحيب
+  const [showSplash, setShowSplash] = useState<boolean>(false);
+
   // Navigation tabs: 'print' | 'scanner'
   const [activeTab, setActiveTab] = useState<'print' | 'scanner'>('print');
 
   // Modals state
   const [isCodeExplorerOpen, setIsCodeExplorerOpen] = useState<boolean>(false);
   const [isPrintProgressOpen, setIsPrintProgressOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   // Batch Print Jobs queue
   const [jobs, setJobs] = useState<PrintJobItem[]>([
@@ -195,22 +206,59 @@ export function App() {
   const singleSideSheets = Math.max(1, Math.ceil(totalPages / pagesPerSheet));
   const totalPhysicalSheets = duplexMode !== 'simplex' ? Math.max(1, Math.ceil(singleSideSheets / 2)) : singleSideSheets;
 
+  // ───────── شاشة التثبيت (عند عدم التثبيت بعد) ─────────
+  if (!installed) {
+    return (
+      <InstallerWizard
+        onCancel={() => setInstalled(true)}
+        onFinish={() => {
+          setInstalled(true);
+          setShowSplash(true);
+        }}
+        onLaunchApp={() => {
+          setInstalled(true);
+          setShowSplash(true);
+        }}
+      />
+    );
+  }
+
+  // ───────── شاشة الترحيب عند فتح البرنامج ─────────
+  if (showSplash) {
+    return <SplashWelcome onDone={() => setShowSplash(false)} />;
+  }
+
   return (
     <div
       dir="rtl"
-      className="min-h-screen bg-slate-100 text-gray-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white"
+      className="min-h-screen bg-slate-100 text-gray-900 flex flex-col selection:bg-[var(--t-primary)] selection:text-white"
     >
-      {/* 1. Windows 11 Fluent App Header TitleBar */}
+      {/* 1. هيدر البرنامج الغامق (جريدانت أزرق وكحلي) */}
       <TitleBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onOpenCodeExplorer={() => setIsCodeExplorerOpen(true)}
-        printerName={selectedPrinter.name}
         printerStatus={selectedPrinter.status}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onMinimize={() => {
+          const el = document.documentElement;
+          if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+        }}
+        onMaximize={() => {
+          if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+          else document.documentElement.requestFullscreen?.().catch(() => {});
+        }}
+        onClose={() => {
+          if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+          window.close();
+        }}
       />
 
-      {/* 2. Main Content Viewport */}
-      <main className="flex-1 p-2 sm:p-4 max-w-[1920px] w-full mx-auto overflow-y-auto">
+      {/* 2. الأزرار أسفل الهيدر: طباعة / الاسكانر */}
+      <NavTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* 3. Main Content Viewport */}
+      <main
+        className="flex-1 py-2 px-2 sm:py-3 sm:px-4 w-full mx-auto overflow-y-auto origin-top"
+        style={{ zoom: uiScale } as React.CSSProperties}
+      >
         {activeTab === 'print' ? (
           <AdvancedPrintTab
             jobs={jobs}
@@ -267,12 +315,13 @@ export function App() {
         )}
       </main>
 
-      {/* 3. Windows 11 Status Bar */}
-      <StatusBar
+      {/* 4. فوتر غامق */}
+      <FooterBar
         printer={selectedPrinter}
         tray={selectedTray}
         totalJobs={jobs.length}
         totalPages={totalPages}
+        onOpenCodeExplorer={() => setIsCodeExplorerOpen(true)}
       />
 
       {/* 4. HP PageWide High-Speed Printing Animation Modal */}
@@ -294,6 +343,9 @@ export function App() {
         isOpen={isCodeExplorerOpen}
         onClose={() => setIsCodeExplorerOpen(false)}
       />
+
+      {/* 6. صفحة إعدادات البرنامج (خطوط / ثيمات / معلومات / دعم) */}
+      <SettingsPage isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

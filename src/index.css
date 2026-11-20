@@ -1,14 +1,358 @@
 @import "tailwindcss";
 
+/* ============================================================
+   SMART PRINT — Theme tokens (الخطوط + الثيمات)
+   ============================================================ */
+:root {
+  /* الخط الافتراضي: Tahoma */
+  --app-font: Tahoma, "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* الثيم الافتراضي: أزرق كحلي (جريدانت أزرق + كحلي) */
+  --t-head-1: #050b1c;
+  --t-head-2: #0b2352;
+  --t-head-3: #16357f;
+  --t-head-4: #1e40af;
+  --t-head-accent: #38bdf8;
+
+  --t-primary: #1d4ed8;
+  --t-primary-2: #2563eb;
+  --t-primary-hover: #1e40af;
+  --t-primary-soft: #eff6ff;
+  --t-primary-soft-2: #dbeafe;
+  --t-primary-ink: #1e40af;
+  --t-primary-border: #bfdbfe;
+  --t-accent: #22d3ee;
+  --t-glow: 56 189 248;
+}
+
+[data-theme="amber"] {
+  /* كهرماني في برتقالي */
+  --t-head-1: #1a0f05;
+  --t-head-2: #4a2208;
+  --t-head-3: #92400e;
+  --t-head-4: #c2410c;
+  --t-head-accent: #fbbf24;
+
+  --t-primary: #d97706;
+  --t-primary-2: #f59e0b;
+  --t-primary-hover: #b45309;
+  --t-primary-soft: #fffbeb;
+  --t-primary-soft-2: #fef3c7;
+  --t-primary-ink: #92400e;
+  --t-primary-border: #fde68a;
+  --t-accent: #fb923c;
+  --t-glow: 251 191 36;
+}
+
+[data-theme="aqua"] {
+  /* سماوى مائي */
+  --t-head-1: #03191f;
+  --t-head-2: #064e5c;
+  --t-head-3: #0e7490;
+  --t-head-4: #0891b2;
+  --t-head-accent: #67e8f9;
+
+  --t-primary: #0891b2;
+  --t-primary-2: #06b6d4;
+  --t-primary-hover: #0e7490;
+  --t-primary-soft: #ecfeff;
+  --t-primary-soft-2: #cffafe;
+  --t-primary-ink: #155e75;
+  --t-primary-border: #a5f3fc;
+  --t-accent: #22d3ee;
+  --t-glow: 103 232 249;
+}
+
+[data-theme="petrol"] {
+  /* أزرق بترولي */
+  --t-head-1: #041c1a;
+  --t-head-2: #0b3b36;
+  --t-head-3: #115e59;
+  --t-head-4: #0f766e;
+  --t-head-accent: #5eead4;
+
+  --t-primary: #0f766e;
+  --t-primary-2: #14b8a6;
+  --t-primary-hover: #115e59;
+  --t-primary-soft: #f0fdfa;
+  --t-primary-soft-2: #ccfbf1;
+  --t-primary-ink: #115e59;
+  --t-primary-border: #99f6e4;
+  --t-accent: #2dd4bf;
+  --t-glow: 94 234 212;
+}
+
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   body {
-    font-family: 'Cairo', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: var(--app-font);
     user-select: none;
     -webkit-font-smoothing: antialiased;
+    background-color: #eef2f7;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
   }
 }
 
-/* Custom Windows 11 style scrollbars */
+/* ============================================================
+   Gradients & surfaces
+   ============================================================ */
+.hdr-grad {
+  background-image: linear-gradient(
+    120deg,
+    var(--t-head-1) 0%,
+    var(--t-head-2) 38%,
+    var(--t-head-3) 72%,
+    var(--t-head-4) 100%
+  );
+}
+
+.hdr-grad-soft {
+  background-image: linear-gradient(
+    100deg,
+    var(--t-head-2) 0%,
+    var(--t-head-3) 60%,
+    var(--t-head-4) 100%
+  );
+}
+
+.sect-hdr {
+  background-image: linear-gradient(
+    115deg,
+    var(--t-head-1) 0%,
+    var(--t-head-2) 45%,
+    var(--t-head-3) 82%,
+    var(--t-head-4) 100%
+  );
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.sect-hdr::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 160% at 100% 0%,
+    rgba(var(--t-glow) / 0.28) 0%,
+    rgba(var(--t-glow) / 0) 55%
+  );
+  pointer-events: none;
+}
+
+.btn-primary-grad {
+  background-image: linear-gradient(
+    100deg,
+    var(--t-primary) 0%,
+    var(--t-primary-2) 50%,
+    var(--t-head-3) 100%
+  );
+}
+
+.text-primary-theme {
+  color: var(--t-primary-ink);
+}
+
+.bg-primary-soft {
+  background-color: var(--t-primary-soft);
+}
+
+.ring-theme {
+  box-shadow: 0 0 0 3px rgba(var(--t-glow) / 0.35);
+}
+
+/* ============================================================
+   Animations (حركات الأزرار والعناصر)
+   ============================================================ */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  60% {
+    transform: scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--t-glow) / 0.45);
+  }
+  50% {
+    box-shadow: 0 0 22px 4px rgba(var(--t-glow) / 0.35);
+  }
+}
+
+@keyframes shineSweep {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-12deg);
+  }
+}
+
+@keyframes gradientShift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes spinSlow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dropFall {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.6);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-pop-in {
+  animation: popIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.anim-float {
+  animation: floatY 4s ease-in-out infinite;
+}
+
+.anim-glow {
+  animation: glowPulse 2.8s ease-in-out infinite;
+}
+
+.anim-spin-slow {
+  animation: spinSlow 9s linear infinite;
+}
+
+.anim-gradient {
+  background-size: 220% 220%;
+  animation: gradientShift 6s ease infinite;
+}
+
+/* أزرار تفاعلية (رفع + نبض + لمعة) */
+.btn-pop {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease, background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease, filter 0.2s ease;
+  will-change: transform;
+}
+
+.btn-pop:hover {
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 10px 22px -10px rgba(15, 23, 42, 0.45);
+}
+
+.btn-pop:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 2px 8px -4px rgba(15, 23, 42, 0.4);
+}
+
+.btn-pop:disabled {
+  transform: none;
+  box-shadow: none;
+}
+
+/* لمعة تمر عند المرور بالماوس */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.btn-shine::before {
+  content: "";
+  position: absolute;
+  top: -40%;
+  bottom: -40%;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.42),
+    transparent
+  );
+  transform: translateX(-160%) skewX(-12deg);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.btn-shine:hover::before {
+  opacity: 1;
+  animation: shineSweep 0.85s ease;
+}
+
+/* حركة دخول متتالية للبطاقات */
+.stagger > * {
+  animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.stagger > *:nth-child(3) { animation-delay: 0.14s; }
+.stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger > *:nth-child(5) { animation-delay: 0.26s; }
+.stagger > *:nth-child(6) { animation-delay: 0.32s; }
+
+/* ============================================================
+   Scrollbars
+   ============================================================ */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -27,9 +371,8 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(140, 140, 140, 0.6);
-  border-radius: 9999px;
-  border: 2px solid transparent;
   background-clip: content-box;
+  border: 2px solid transparent;
 }
 
 /* Scanner light bar animation */
@@ -69,3 +412,31 @@
   transform: rotateY(180deg);
 }
 
+/* ============================================================
+   Installer / Setup (Windows 11 style)
+   ============================================================ */
+.win11-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 30px 80px -30px rgba(2, 6, 23, 0.75),
+    0 2px 10px rgba(2, 6, 23, 0.15);
+}
+
+.win11-acrylic-dark {
+  background: linear-gradient(
+    145deg,
+    rgba(8, 18, 40, 0.94),
+    rgba(12, 32, 66, 0.9)
+  );
+  backdrop-filter: blur(28px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.setup-progress {
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.drop-fall {
+  animation: dropFall 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

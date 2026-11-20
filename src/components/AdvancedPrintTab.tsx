@@ -20,8 +20,10 @@ import {
   FileUp,
   Sliders,
   CheckCircle2,
-  Gauge
+  Gauge,
+  Eye
 } from 'lucide-react';
+import { SectionHeader, HeaderBadge } from './SectionHeader';
 import {
   PrintJobItem,
   PrinterInfo,
@@ -183,29 +185,20 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
       {/* ================= COLUMN 1: File Batch Manager & Smart Quick Presets (4 cols) ================= */}
       <div className="xl:col-span-4 flex flex-col gap-3">
         {/* Batch File Manager Card */}
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs flex-1 flex flex-col">
-          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <FileText className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-gray-900">إدارة الملفات (Batch Print)</h3>
-                <p className="text-[11px] text-gray-500">
-                  {jobs.length} ملفات جاهزة للطباعة ({totalPages} صفحة)
-                </p>
-              </div>
-            </div>
-            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-              PDF / DOCX / IMG
-            </span>
-          </div>
+        <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs flex-1 flex flex-col overflow-hidden">
+          <SectionHeader
+            icon={<FileText className="w-4 h-4" />}
+            title="إدارة الملفات"
+            subtitle={`${jobs.length} ملفات جاهزة للطباعة (${totalPages} صفحة)`}
+            badge={<HeaderBadge mono>PDF / DOCX / IMG</HeaderBadge>}
+          />
 
+          <div className="p-4 flex-1 flex flex-col min-h-0">
           {/* Action buttons toolbar */}
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 my-3">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 mb-3">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-1 p-2 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/70 transition-colors"
+              className="btn-pop flex items-center justify-center gap-1 p-2 rounded-lg text-xs font-semibold bg-primary-soft text-[var(--t-primary-ink)] hover:bg-[var(--t-primary-soft-2)] border border-[var(--t-primary-border)]"
               title="إضافة ملفات PDF، صور أو وورد"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -286,7 +279,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                       onClick={() => onSelectJob(job.id)}
                       className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
                         isSelected
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          ? 'btn-primary-grad text-white border-transparent shadow-sm'
                           : 'bg-white hover:bg-gray-100/80 border-gray-200 text-gray-800'
                       }`}
                     >
@@ -300,7 +293,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                               : job.type === 'docx'
                               ? isSelected
                                 ? 'bg-white/20 text-white'
-                                : 'bg-blue-100 text-blue-700'
+                                : 'bg-[var(--t-primary-soft-2)] text-[var(--t-primary-ink)]'
                               : isSelected
                               ? 'bg-white/20 text-white'
                               : 'bg-emerald-100 text-emerald-700'
@@ -333,20 +326,23 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
               </div>
             )}
           </div>
+          </div>
         </div>
 
         {/* 3 Smart Quick Presets (الاختصارات الذكية المطلوبة) */}
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <h3 className="font-bold text-sm text-gray-900">أزرار الاختصارات الذكية (Quick Presets)</h3>
-          </div>
+        <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs overflow-hidden">
+          <SectionHeader
+            icon={<Sparkles className="w-4 h-4" />}
+            title="أزرار الاختصارات الذكية"
+            subtitle="Quick Presets — ضغطة واحدة"
+            badge={<HeaderBadge>3 أزرار</HeaderBadge>}
+          />
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
             {/* 1. وضع التوفير */}
             <button
               onClick={onApplyEcoPreset}
-              className={`p-3 rounded-xl border text-right transition-all flex flex-col justify-between group active:scale-95 ${
+              className={`btn-pop p-3 rounded-xl border text-right flex flex-col justify-between group ${
                 activePresetId === 'eco-mode'
                   ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-400/40 shadow-xs'
                   : 'bg-gray-50/80 hover:bg-emerald-50/50 border-gray-200'
@@ -371,7 +367,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
             {/* 2. وضع الكتيب */}
             <button
               onClick={onApplyBookletPreset}
-              className={`p-3 rounded-xl border text-right transition-all flex flex-col justify-between group active:scale-95 ${
+              className={`btn-pop p-3 rounded-xl border text-right flex flex-col justify-between group ${
                 activePresetId === 'booklet-mode'
                   ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-400/40 shadow-xs'
                   : 'bg-gray-50/80 hover:bg-indigo-50/50 border-gray-200'
@@ -396,14 +392,14 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
             {/* 3. جودة عالية */}
             <button
               onClick={onApplyHighQualityPreset}
-              className={`p-3 rounded-xl border text-right transition-all flex flex-col justify-between group active:scale-95 ${
+              className={`btn-pop p-3 rounded-xl border text-right flex flex-col justify-between group ${
                 activePresetId === 'high-quality'
-                  ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-400/40 shadow-xs'
+                  ? 'bg-primary-soft border-[var(--t-primary)] ring-2 ring-[var(--t-primary)]/30 shadow-xs'
                   : 'bg-gray-50/80 hover:bg-blue-50/50 border-gray-200'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-[var(--t-primary-soft-2)] text-[var(--t-primary-ink)] flex items-center justify-center">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 {activePresetId === 'high-quality' && (
@@ -411,7 +407,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                 )}
               </div>
               <div>
-                <h4 className="font-bold text-xs text-gray-900 group-hover:text-blue-700">3. جودة فائقة</h4>
+                <h4 className="font-bold text-xs text-gray-900 group-hover:text-[var(--t-primary-ink)]">3. جودة فائقة</h4>
                 <p className="text-[10px] text-gray-500 leading-tight mt-0.5">
                   ألوان كاملة CMYK + صفحة واحدة 1200 DPI
                 </p>
@@ -424,23 +420,19 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
       {/* ================= COLUMN 2: HP PageWide Controller, Paper Trays & Layout (4 cols) ================= */}
       <div className="xl:col-span-4 flex flex-col gap-3">
         {/* Printer & Trays Controller */}
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs">
-          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <Printer className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-gray-900">التحكم في الطابعة والأدراج</h3>
-                <p className="text-[11px] text-gray-500">HP PageWide Stationary Printbar</p>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-              متصل وجاهز
-            </span>
-          </div>
+        <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs overflow-hidden">
+          <SectionHeader
+            icon={<Printer className="w-4 h-4" />}
+            title="التحكم في الطباعة والأدراج"
+            subtitle="HP PageWide Stationary Printbar"
+            badge={
+              <span className="text-[10px] font-bold text-emerald-100 bg-emerald-400/20 ring-1 ring-emerald-300/40 px-2 py-0.5 rounded-full">
+                متصل وجاهز
+              </span>
+            }
+          />
 
-          <div className="space-y-3 mt-3">
+          <div className="p-4 space-y-3">
             {/* Printer Selector */}
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">الطابعة المثبتة:</label>
@@ -450,7 +442,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                   const p = printers.find((item) => item.id === e.target.value);
                   if (p) onSelectPrinter(p);
                 }}
-                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
               >
                 {printers.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -471,7 +463,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                   const t = selectedPrinter.paperTrays.find((item) => item.id === e.target.value);
                   if (t) onSelectTray(t);
                 }}
-                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
               >
                 {selectedPrinter.paperTrays.map((tray) => (
                   <option key={tray.id} value={tray.id}>
@@ -490,7 +482,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                   const s = selectedPrinter.supportedSizes.find((item) => item.id === e.target.value);
                   if (s) onSelectPaperSize(s);
                 }}
-                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
               >
                 {selectedPrinter.supportedSizes.map((size) => (
                   <option key={size.id} value={size.id}>
@@ -568,13 +560,14 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
         </div>
 
         {/* Print Layout & Imposition Options */}
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs">
-          <div className="flex items-center gap-2 pb-2.5 border-b border-gray-100 mb-3">
-            <Sliders className="w-4 h-4 text-blue-600" />
-            <h3 className="font-bold text-sm text-gray-900">خيارات الطباعة والتخطيط</h3>
-          </div>
+        <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs overflow-hidden">
+          <SectionHeader
+            icon={<Sliders className="w-4 h-4" />}
+            title="خيارات الطباعة"
+            subtitle="الألوان · الوش والضهر · التخطيط"
+          />
 
-          <div className="space-y-3">
+          <div className="p-4 space-y-3">
             {/* Color Mode Toggle */}
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5">نمط الألوان:</label>
@@ -584,7 +577,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                   onClick={() => onChangeColorMode('color')}
                   className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-2 ${
                     colorMode === 'color'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      ? 'btn-primary-grad text-white border-transparent shadow-xs'
                       : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-300'
                   }`}
                 >
@@ -613,7 +606,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
               <select
                 value={duplexMode}
                 onChange={(e) => onChangeDuplexMode(e.target.value as DuplexMode)}
-                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
               >
                 <option value="simplex">وجه واحد فقط (Simplex - One Sided)</option>
                 <option value="duplex_long">وجهين - قلب طرف طويل (Duplex Long Edge)</option>
@@ -629,7 +622,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
               <select
                 value={layout}
                 onChange={(e) => onChangeLayout(e.target.value as ImpositionLayout)}
-                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
               >
                 <option value="1-up">1-up: صفحة واحدة لكل ورقة (عادي)</option>
                 <option value="2-up">2-up: صفحتان جنباً إلى جنب في الورقة</option>
@@ -649,7 +642,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                     max="999"
                     value={copies}
                     onChange={(e) => onChangeCopies(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-1.5 text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-1.5 text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
                   />
                 </div>
               </div>
@@ -659,7 +652,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                 <select
                   value={pageRange}
                   onChange={(e) => onChangePageRange(e.target.value as PageRangeOption)}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-2 py-1.5 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-2 py-1.5 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
                 >
                   <option value="all">كافة الصفحات</option>
                   <option value="odd">صفحات فردية فقط</option>
@@ -676,7 +669,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                   placeholder="مثال: 1-5, 8, 11-14"
                   value={customPageRange}
                   onChange={(e) => onChangeCustomPageRange(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-1.5 text-xs text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-1.5 text-xs text-right focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
                 />
               </div>
             )}
@@ -686,60 +679,60 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
 
       {/* ================= COLUMN 3: Real Visual Preview & Big Print Button (4 cols) ================= */}
       <div className="xl:col-span-4 flex flex-col gap-3">
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs flex-1 flex flex-col">
+        <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs flex-1 flex flex-col overflow-hidden">
           {/* Preview Header & Controls */}
-          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm text-gray-900">المعاينة البصرية التفاعلية</h3>
-              <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
-                تحديث حي
-              </span>
-            </div>
-
+          <SectionHeader
+            icon={<Eye className="w-4 h-4" />}
+            title="المعاينة البصرية"
+            subtitle="تحديث حي على الورقة"
+            badge={<HeaderBadge>تحديث حي</HeaderBadge>}
+          >
             {/* Next / Prev Sheet controls */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 bg-white/10 rounded-lg ring-1 ring-white/15 px-1">
               <button
                 onClick={handlePrevSheet}
                 disabled={currentSheetIndex === 0}
-                className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 flex items-center justify-center transition-colors"
+                className="btn-pop w-6 h-6 rounded-md hover:bg-white/20 disabled:opacity-30 flex items-center justify-center transition-colors text-white"
                 title="الورقة السابقة"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
-              <span className="text-xs font-bold text-gray-700 px-1 font-mono">
+              <span className="text-[11px] font-bold text-white px-1 font-mono">
                 {currentSheetIndex + 1} / {totalPhysicalSheets}
               </span>
               <button
                 onClick={handleNextSheet}
                 disabled={currentSheetIndex >= totalPhysicalSheets - 1}
-                className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 flex items-center justify-center transition-colors"
+                className="btn-pop w-6 h-6 rounded-md hover:bg-white/20 disabled:opacity-30 flex items-center justify-center transition-colors text-white"
                 title="الورقة التالية"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          </SectionHeader>
 
+          <div className="p-4 flex-1 flex flex-col min-h-0">
           {/* Zoom / Rotate / Duplex Flip Toolbar */}
-          <div className="flex items-center justify-between bg-gray-100/80 p-1.5 rounded-xl my-2.5 text-xs">
+          <div className="flex items-center justify-between bg-slate-100 p-1.5 rounded-xl mb-2.5 text-xs">
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setZoomLevel((z) => Math.min(1.8, z + 0.15))}
-                className="p-1.5 hover:bg-white rounded-lg text-gray-700 transition-colors"
+                className="btn-pop p-1.5 hover:bg-white hover:text-[var(--t-primary-ink)] rounded-lg text-gray-700 shadow-2xs"
                 title="تكبير"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.15))}
-                className="p-1.5 hover:bg-white rounded-lg text-gray-700 transition-colors"
+                className="btn-pop p-1.5 hover:bg-white hover:text-[var(--t-primary-ink)] rounded-lg text-gray-700 shadow-2xs"
                 title="تصغير"
               >
                 <ZoomOut className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setZoomLevel(1)}
-                className="px-2 py-1 hover:bg-white rounded-lg text-[11px] font-mono text-gray-600 transition-colors"
+                className="btn-pop px-2 py-1 hover:bg-white rounded-lg text-[11px] font-mono font-bold text-[var(--t-primary-ink)] shadow-2xs"
+                title="إعادة الضبط 100%"
               >
                 {Math.round(zoomLevel * 100)}%
               </button>
@@ -748,7 +741,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={handleRotate}
-                className="flex items-center gap-1 px-2.5 py-1 hover:bg-white rounded-lg font-semibold text-gray-700 transition-colors"
+                className="btn-pop flex items-center gap-1 px-2.5 py-1 hover:bg-white rounded-lg font-semibold text-gray-700"
                 title="تدوير الصفحة 90 درجة"
               >
                 <RotateCw className="w-3.5 h-3.5" />
@@ -757,8 +750,10 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
 
               <button
                 onClick={handleFlipDuplex}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold transition-colors ${
-                  isBackSide ? 'bg-blue-600 text-white shadow-xs' : 'hover:bg-white text-gray-700'
+                className={`btn-pop flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold ${
+                  isBackSide
+                    ? 'btn-primary-grad text-white shadow-xs'
+                    : 'hover:bg-white text-gray-700'
                 }`}
                 title="قلب بين الوجه والظهر للطباعة على الوجهين"
               >
@@ -792,7 +787,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                     {/* Document Header */}
                     <div>
                       <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-                        <div className="h-3 w-24 bg-blue-600 rounded" />
+                        <div className="h-3 w-24 rounded btn-primary-grad" />
                         <div className="h-2 w-12 bg-gray-200 rounded" />
                       </div>
                       <div className="mt-3 text-[11px] font-bold text-gray-900 truncate">
@@ -819,7 +814,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                           <div className="h-2 w-16 bg-blue-400 rounded" />
                           <div className="h-1.5 w-10 bg-blue-300 rounded" />
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-700">
+                        <div className="w-8 h-8 rounded-full bg-[var(--t-primary-soft-2)] flex items-center justify-center text-[10px] font-bold text-[var(--t-primary-ink)]">
                           HP
                         </div>
                       </div>
@@ -842,7 +837,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                     {/* Left Sub-page */}
                     <div className="flex-1 border border-gray-200 rounded p-1.5 flex flex-col justify-between bg-gray-50/50">
                       <div>
-                        <div className="h-2 bg-blue-600 rounded w-12 mb-1" />
+                        <div className="h-2 rounded w-12 mb-1 btn-primary-grad" />
                         <div className="text-[8px] font-bold text-gray-700">صفحة #{currentSheetIndex * 2 + 1}</div>
                         <div className="space-y-1 mt-2">
                           <div className="h-1 bg-gray-300 rounded w-full" />
@@ -857,7 +852,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                     {/* Right Sub-page */}
                     <div className="flex-1 border border-gray-200 rounded p-1.5 flex flex-col justify-between bg-gray-50/50">
                       <div>
-                        <div className="h-2 bg-blue-600 rounded w-12 mb-1" />
+                        <div className="h-2 rounded w-12 mb-1 btn-primary-grad" />
                         <div className="text-[8px] font-bold text-gray-700">صفحة #{currentSheetIndex * 2 + 2}</div>
                         <div className="space-y-1 mt-2">
                           <div className="h-1 bg-gray-300 rounded w-full" />
@@ -880,7 +875,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                         className="border border-gray-200 rounded p-1 flex flex-col justify-between bg-gray-50/60"
                       >
                         <div>
-                          <div className="text-[7px] font-bold text-blue-700">
+                          <div className="text-[7px] font-bold text-[var(--t-primary-ink)]">
                             ص {currentSheetIndex * 4 + num}
                           </div>
                           <div className="space-y-0.5 mt-1">
@@ -938,7 +933,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
           </div>
 
           {/* Prominent Windows 11 Primary Print Button */}
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-auto pt-3 border-t border-gray-100">
             <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
               <span className="font-semibold">
                 المجموع:{' '}
@@ -955,7 +950,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
             <button
               onClick={onStartPrint}
               disabled={jobs.length === 0}
-              className="w-full py-3.5 px-6 rounded-xl font-black text-sm text-white bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 shadow-lg shadow-blue-600/30 transition-all duration-200 flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="btn-pop btn-shine w-full py-3.5 px-6 rounded-xl font-black text-sm text-white btn-primary-grad shadow-lg shadow-black/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer anim-gradient"
             >
               <Printer className="w-5 h-5 animate-pulse" />
               <span>بدء الطباعة الآن (Print Job)</span>
@@ -963,6 +958,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
                 {selectedPrinter.maxSpeedPpm} PPM
               </span>
             </button>
+          </div>
           </div>
         </div>
       </div>
