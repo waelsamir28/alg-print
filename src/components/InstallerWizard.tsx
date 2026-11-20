@@ -17,7 +17,8 @@ import {
   Layers,
   Loader2,
 } from 'lucide-react';
-import { Logo3D, DesktopIcon } from './Logo';
+import { DesktopIcon } from './Logo';
+import { BrandLogo } from './BrandLogo';
 import heroImg from '../assets/installer-hero.jpg';
 import featureImg from '../assets/installer-feature.jpg';
 
@@ -152,6 +153,7 @@ export const InstallerWizard: React.FC<InstallerWizardProps> = ({
               <div className="text-[11px] font-bold text-[var(--t-accent)] mb-1">
                 مرحباً بك في معالج التثبيت
               </div>
+              <BrandLogo height={52} glow className="mb-2" />
               <div className="flex items-baseline gap-2 text-2xl sm:text-3xl font-black leading-none">
                 <span>SMART</span>
                 <span style={{ color: 'var(--t-accent)' }}>PRINT</span>
@@ -163,7 +165,7 @@ export const InstallerWizard: React.FC<InstallerWizardProps> = ({
               </p>
             </div>
             <div className="hidden sm:block anim-float">
-              <DesktopIcon size={84} />
+              <BrandLogo height={110} glow />
             </div>
           </div>
         </div>
@@ -224,7 +226,7 @@ export const InstallerWizard: React.FC<InstallerWizardProps> = ({
             <div className="text-sm font-black">خيارات التثبيت</div>
             <div className="text-[11px] text-white/60">اختر مكان التثبيت والاختصارات</div>
           </div>
-          <Logo3D size={40} />
+          <BrandLogo height={44} glow />
         </div>
 
         <div className="p-4 sm:p-6 overflow-y-auto">
@@ -344,7 +346,7 @@ export const InstallerWizard: React.FC<InstallerWizardProps> = ({
 
             {/* شعار متحرك */}
             <div className="absolute top-3 right-3 anim-float">
-              <Logo3D size={36} />
+              <BrandLogo height={34} glow />
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 p-4">

@@ -26,7 +26,8 @@ import {
   type AppFont,
   type AppTheme,
 } from '../context/SettingsContext';
-import { Logo3D, DesktopIcon } from './Logo';
+import { DesktopIcon } from './Logo';
+import { BrandLogo } from './BrandLogo';
 
 interface SettingsPageProps {
   isOpen: boolean;
@@ -250,7 +251,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ isOpen, onClose }) =
             {tab === 'about' && (
               <div className="animate-fade-up">
                 <div className="hdr-grad rounded-xl p-4 flex items-center gap-4 mb-4">
-                  <Logo3D size={54} />
+                  <div className="shrink-0 anim-float">
+                    <BrandLogo height={56} glow />
+                  </div>
                   <div className="text-white">
                     <div className="flex items-baseline gap-1.5 font-black text-lg">
                       <span>SMART</span>
