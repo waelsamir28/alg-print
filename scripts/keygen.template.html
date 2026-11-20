@@ -152,6 +152,14 @@
         <div class="code-big" id="pinDisplay">····</div>
         <div class="grid" id="pinPad" style="grid-template-columns: repeat(3, 1fr); gap: 7px"></div>
         <p class="hint" id="pinMsg" style="color: var(--bad); min-height: 15px"></p>
+        <div style="margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px">
+          <button type="button" class="btn-ghost" id="btnToggleResetPin" style="width: 100%; font-size: 11px; padding: 7px">🔑 عمل كلمة سر جديدة</button>
+          <div id="resetPinBox" style="display: none; margin-top: 8px; text-align: right">
+            <label style="font-size: 10.5px">كلمة السر الجديدة (4 إلى 8 أرقام)</label>
+            <input type="password" id="newPinInput" inputmode="numeric" maxlength="8" placeholder="مثال: 5678" style="text-align: center; letter-spacing: 3px; margin-bottom: 6px" />
+            <button type="button" class="btn-primary" id="btnSaveNewPin" style="width: 100%; font-size: 11.5px; padding: 8px">حفظ كلمة السر الجديدة والدخول</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -162,7 +170,10 @@
           <h1>SMART PRINT — مولّد سيريالات التفعيل</h1>
           <p>يعمل بدون إنترنت · ملف واحد · سيريال مخصص لكل جهاز</p>
         </div>
-        <div class="badge">م/ وائل الجمال</div>
+        <div style="display: flex; align-items: center; gap: 8px; position: relative; z-index: 2">
+          <button type="button" id="btnChangePinInside" class="btn-ghost" style="background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); font-size: 11px; padding: 5px 10px; border-radius: 99px; cursor: pointer">🔑 كلمة سر جديدة</button>
+          <div class="badge">م/ وائل الجمال</div>
+        </div>
       </div>
 
       <div class="wrap">
@@ -287,6 +298,14 @@
       const DAY_MS = 86400000;
       const DEFAULT_SLOT = 0;
       const PIN_CODE = '__INJECTED_PIN__'; // يُحقن وقت البناء
+      const PIN_STORAGE_KEY = 'smartprint.devtool.pin';
+      function getActivePin() {
+        try {
+          const saved = localStorage.getItem(PIN_STORAGE_KEY);
+          if (saved && /^\d{4,8}$/.test(saved)) return saved;
+        } catch (e) {}
+        return PIN_CODE === '__INJECTED_PIN__' || !/^\d{4,8}$/.test(PIN_CODE) ? '1234' : PIN_CODE;
+      }
 
       /* ------------------------------ أدوات ------------------------------ */
       function fnv1a(input, seed) {
@@ -462,27 +481,57 @@
           b.style.fontSize = '15px';
           b.style.padding = '12px 0';
           b.onclick = () => {
+            const activePin = getActivePin();
             if (k === 'C') { pinTyped = ''; }
             else if (k === '✔') { checkPin(); return; }
-            else if (pinTyped.length < PIN_CODE.length) { pinTyped += k; }
+            else if (pinTyped.length < activePin.length) { pinTyped += k; }
             $('pinDisplay').textContent = pinTyped || '····';
-            if (pinTyped.length === PIN_CODE.length) checkPin();
+            if (pinTyped.length === activePin.length) checkPin();
           };
           pad.appendChild(b);
         });
       }
       function checkPin() {
-        if (pinTyped === PIN_CODE) {
+        if (pinTyped === getActivePin()) {
           try { sessionStorage.setItem('smartprint.devtool.unlocked', '1'); } catch (e) {}
           $('lockScreen').style.display = 'none';
           $('app').style.display = 'block';
           renderRegistry();
         } else {
-          $('pinMsg').textContent = 'رمز غير صحيح';
+          $('pinMsg').textContent = 'رمز غير صحيح — يمكنك الضغط على "عمل كلمة سر جديدة" بالأسفل';
           pinTyped = '';
           $('pinDisplay').textContent = '····';
         }
       }
+      $('btnToggleResetPin').onclick = () => {
+        const box = $('resetPinBox');
+        box.style.display = box.style.display === 'none' ? 'block' : 'none';
+      };
+      $('btnSaveNewPin').onclick = () => {
+        const np = ($('newPinInput').value || '').trim();
+        if (!/^\d{4,8}$/.test(np)) {
+          $('pinMsg').textContent = 'كلمة السر يجب أن تكون 4 إلى 8 أرقام فقط';
+          return;
+        }
+        try { localStorage.setItem(PIN_STORAGE_KEY, np); } catch (e) {}
+        try { sessionStorage.setItem('smartprint.devtool.unlocked', '1'); } catch (e) {}
+        $('pinMsg').textContent = '';
+        $('lockScreen').style.display = 'none';
+        $('app').style.display = 'block';
+        renderRegistry();
+        toast('تم حفظ كلمة السر الجديدة بنجاح');
+      };
+      $('btnChangePinInside').onclick = () => {
+        const np = prompt('أدخل كلمة السر الجديدة (4 إلى 8 أرقام):');
+        if (np === null) return;
+        const clean = np.trim();
+        if (!/^\d{4,8}$/.test(clean)) {
+          alert('كلمة السر يجب أن تكون 4 إلى 8 أرقام فقط.');
+          return;
+        }
+        try { localStorage.setItem(PIN_STORAGE_KEY, clean); } catch (e) {}
+        toast('تم تحديث كلمة السر بنجاح');
+      };
 
       /* ---------- السجل ---------- */
       function loadRegistry() {
