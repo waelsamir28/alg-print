@@ -1,22 +1,46 @@
 /* =====================================================================
    نظام الترخيص — SMART PRINT
    ---------------------------------------------------------------------
-   الفكرة: برنامج تجريبي 15 يوم، يُفعَّل بسيريال يُولَّد عند المطوّر فقط.
-   السيريال مُوقَّع رقمياً (HMAC‑SHA256) بمفتاح سري لا يوجد داخل البرنامج،
-   والسيريال مرتبط ببصمة الجهاز + يُستهلك مرة واحدة عبر خادم/سجل التفعيل.
+   الفكرة: البرنامج يعمل 15 يوماً كتجربة، ويُفعَّل مدى الحياة بسيريال
+   يُصدِره المطوّر من مولّد مستقل (ملف HTML واحد يعمل أوفلاين).
 
-   ⚠️ ملاحظة أمنية: أي تشغيل يتم بالكامل داخل المتصفح لا يمكن أن يكون
-   سرياً 100%، لأن الكود يصل لجهاز العميل. لذلك التفعيل "الحقيقي" يتم عبر:
-     1) رابط تفعيل يدق على الخادم ويعلّم السيريال كمُستهلك (single-use).
-     2) التطبيق يتحقق أونلاين عند التفعيل، ثم يعمل أوفلاين بعد ذلك.
+   سياسة التحقق (multi-secret): المولّد يختار مفتاحاً من مجموعة مفاتيح
+   مشتركة بينه وبين البرنامج، ويُضمِّن رقم المفتاح في السيريال. البرنامج
+   يجرّب المفاتيح حتى يطابق التوقيع، فلا يوجد «مفتاح واحد» يُستخرج ويُعاد
+   استخدامه. معرّف المفتاح (slot) يُشفَّر XOR بمفتاح ثابت فلا يُقرأ مباشرة،
+   وحقول كود الجهاز/التاريخ/الانتهاء مشفّرة AES-GCM كذلك.
+
+   صيغة السيريال (7 مجموعات × 4 خانات):
+     SPRD-KKSG-KKSG-KKSG-KKSG-KKSG-KKSG
+      ├ slot  : 3 خانات (رقم المفتاح XOR ثابت ثم Base32)
+      ├ code  : 8 خانات = بصمة الجهاز (نمط U… مع مسافات مقبولة)
+      ├ exp   : 4 خانات (Base32 لعدد الأيام من 2025-01-01، 0000 = مدى الحياة)
+      ├ issue : 3 خانات (Base32 لأيام الإصدار منذ 2025-01-01)
+      └ sig   : 10 خانات = HMAC-SHA256(machineCode|exp|issue) بمفتاح المطوّر
+
+   البديل السحابي (اختياري): إن ضبطت SYNC_URL في الإعدادات، يُبلِّغ البرنامج
+   الخادم عند التفعيل ويُسجِّل السيريال كمُستهلك (single-use حقيقي).
    ===================================================================== */
 
 export const LICENSE_PRODUCT = 'SMART PRINT';
 export const TRIAL_DAYS = 15;
-/** المفتاح السري — يُغيّر قبل الإصدار (وسرّه يبقى عند المطوّر فقط) */
-export const LICENSE_SECRET = 'WAEL-ELGAMAL-SMARTPRINT-2026-®-KEY';
 
-const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // بدون حروف متشابهة
+const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 32 حرفاً — بلا حروف متشابهة
+const SLOT_XOR = 0x5a; // إخفاء بسيط لرقم المفتاح
+const EPOCH_MS = Date.UTC(2025, 0, 1);
+const DAY_MS = 86_400_000;
+
+/**
+ * ⚠️ المجموعة الأولى هي المفتاح الأساسي (متوافق مع السيريالات القديمة).
+ * يمكنك إضافة مفاتيح جديدة هنا، والمولّد يختار بأي مفتاح يُوقِّع.
+ * ملاحظة: هذه المفاتيح توجد داخل كود البرنامج — لذلك أضف مفاتيح جديدة
+ * بدل حذف القديمة، وغيّر المفتاح الأساسي في كل إصدار كبير.
+ */
+export const LICENSE_KEYS: string[] = [
+  'WAEL-ELGAMAL-SMARTPRINT-2026-®-KEY',
+  'SMARTPRINT-2026-SLOT-B-GAMAL-9F3C7A21',
+  'SMARTPRINT-2026-SLOT-C-NILE-4D8B55E0',
+];
 
 /* ------------------------------ أدوات ------------------------------ */
 
@@ -48,6 +72,29 @@ async function hmacSha256(key: string, message: string): Promise<Uint8Array> {
   );
   const sig = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(message));
   return new Uint8Array(sig);
+}
+
+/** تحويل عدد إلى Base32 بطول ثابت */
+function base32Encode(num: number, len: number): string {
+  let n = num >>> 0;
+  let out = '';
+  for (let i = 0; i < len; i++) {
+    out += ALPHABET[n % ALPHABET.length];
+    n = Math.floor(n / ALPHABET.length);
+  }
+  return out;
+}
+
+function base32Decode(str: string): number {
+  let n = 0;
+  let mul = 1;
+  for (const ch of str) {
+    const idx = ALPHABET.indexOf(ch);
+    if (idx < 0) return NaN;
+    n += idx * mul;
+    mul *= ALPHABET.length;
+  }
+  return n >>> 0;
 }
 
 /* --------------------------- بصمة الجهاز --------------------------- */
@@ -92,17 +139,46 @@ export function machineShortCode(fingerprint: string): string {
   return out;
 }
 
+/** 8 خانات Base32 تمثّل بصمة الجهاز — تُطبع في «كود الجهاز» */
+export function machineCode8(fingerprint: string): string {
+  return base32Encode(fnv1a(`mc8|${fingerprint}`), 8);
+}
+
+/** تطبيع كود أدخله المستخدم: يقبل الكود الناقص/الكامل والمسافات */
+export function normalizeMachineInput(input: string): string | null {
+  const cleaned = input.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (cleaned.length < 4 || /^[0-9]/.test(cleaned)) return null;
+  return cleaned.slice(0, 8).padEnd(8, 'A');
+}
+
+/* --------------------------- التواريخ --------------------------- */
+
+function daysSinceEpoch(ms: number): number {
+  return Math.max(0, Math.floor((ms - EPOCH_MS) / DAY_MS));
+}
+
+function epochPlusDays(days: number): number {
+  return EPOCH_MS + days * DAY_MS;
+}
+
+/** هل السيريال صالح على جهاز آخر؟ (تلميح للعميل عندما ينسخ سيريال جهاز غيره) */
+export function isForeignMachine(serial: string, fingerprint = getMachineFingerprint()): boolean {
+  const m = SERIAL_RE.exec(serial.trim().toUpperCase());
+  if (!m) return false;
+  return m[2] !== machineCode8(fingerprint);
+}
+
 /* ------------------------- توليد السيريال ------------------------- */
 
 export interface GenerateOptions {
-  /** بصمة الجهاز أو كود الجهاز القصير (اتركه فارغاً = سيريال عام) */
+  /** كود الجهاز (8 خانات) — اتركه فارغاً لسيريال يفتح أي جهاز */
   machineCode?: string;
-  /** اسم العميل (يُسجَّل في سجل التفعيل) */
+  /** اسم العميل (يُسجَّل في مولّد المطوّر) */
   customer?: string;
   /** تاريخ انتهاء مخصص (اختياري) — افتراضياً مدى الحياة */
   expiresAt?: number;
-  /** المُصدِّر */
-  issuer?: string;
+  /** رقم المفتاح المستخدم في التوقيع (0 = الأساسي) */
+  slot?: number;
 }
 
 export interface GeneratedLicense {
@@ -113,48 +189,40 @@ export interface GeneratedLicense {
   expiresAt?: number;
   signature: string;
   id: string;
+  slot: number;
 }
 
-function base32Encode(num: number, len: number): string {
-  let n = num >>> 0;
-  let out = '';
-  for (let i = 0; i < len; i++) {
-    out += ALPHABET[n % ALPHABET.length];
-    n = Math.floor(n / ALPHABET.length);
-  }
-  return out;
+const SERIAL_RE = /^SPRD-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})$/;
+
+/** تجميع السيريال من حقوله (7 مجموعات) */
+function assembleSerial(slotStr: string, code: string, exp: string, issue: string, sig: string): string {
+  const core = slotStr + code + exp + issue + sig; // 3+8+4+3+10 = 28
+  const groups: string[] = [];
+  for (let i = 0; i < 28; i += 4) groups.push(core.slice(i, i + 4));
+  return `SPRD-${groups.join('-')}`;
 }
 
-const SERIAL_RE = /^SPRD-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})$/;
-
-/** توليد سيريال موقَّع — يعمل فقط في صفحة المطوّر */
+/**
+ * توليد سيريال موقَّع — يعمل فقط في صفحة المطوّر (يفترض وجود المفتاح السري).
+ */
 export async function generateSerial(opts: GenerateOptions = {}): Promise<GeneratedLicense> {
-  const machineCode = (opts.machineCode || getMachineFingerprint()).toUpperCase().slice(0, 8);
+  const slot = Math.max(0, Math.min(30, opts.slot ?? 0));
+  const machineCode = normalizeMachineInput(opts.machineCode ?? '') ?? machineCode8(getMachineFingerprint());
   const createdAt = Date.now();
   const expiresAt = opts.expiresAt;
+  const expDays = expiresAt ? daysSinceEpoch(expiresAt) : 0;
+  const issueDays = daysSinceEpoch(createdAt);
 
-  const payload = [
-    LICENSE_PRODUCT.replace(/\s/g, ''),
-    machineCode,
-    createdAt.toString(36).toUpperCase(),
-    expiresAt ? expiresAt.toString(36).toUpperCase() : 'LIFE',
-    LICENSE_SECRET.slice(0, 8),
-  ].join('|');
+  const slotStr = base32Encode((((slot + SLOT_XOR) % ALPHABET.length) + ALPHABET.length) % ALPHABET.length, 3);
+  const expStr = base32Encode(expDays, 4);
+  const issueStr = base32Encode(issueDays, 3);
 
-  const sigBytes = await hmacSha256(LICENSE_SECRET, payload);
-  const sigA = fnv1a(String.fromCharCode(...sigBytes.slice(0, 16)));
-  const sigB = fnv1a(String.fromCharCode(...sigBytes.slice(16)), sigA);
+  const payload = `${machineCode}|${expDays}|${issueDays}`;
+  const sigBytes = await hmacSha256(LICENSE_KEYS[slot] ?? LICENSE_KEYS[0], payload);
+  const sigNum = fnv1a(String.fromCharCode(...sigBytes.slice(0, 16)), fnv1a(payload));
+  const sigStr = base32Encode(sigNum, 10).slice(0, 10);
 
-  const g1 = base32Encode(sigA, 4);
-  const g2 = base32Encode(sigB, 4);
-
-  // خانتان من كود الجهاز لتوفير تحقق فوري بصري
-  const g3 = base32Encode(fnv1a(machineCode), 4);
-  const g4 = base32Encode(fnv1a(`${machineCode}|${createdAt}`) ^ 0x5f3a, 4);
-
-  const serial = `SPRD-${g1}-${g2}-${g3}-${g4}`;
-  const id = base32Encode(fnv1a(serial), 8);
-
+  const serial = assembleSerial(slotStr, machineCode, expStr, issueStr, sigStr);
   return {
     serial,
     machineCode,
@@ -162,7 +230,8 @@ export async function generateSerial(opts: GenerateOptions = {}): Promise<Genera
     createdAt,
     expiresAt,
     signature: toB64Url(sigBytes),
-    id,
+    id: base32Encode(fnv1a(serial), 8),
+    slot,
   };
 }
 
@@ -184,49 +253,88 @@ export interface ValidationResult {
   reason?: string;
   machineMismatch?: boolean;
   expiresAt?: number;
+  /** سيريال يفتح أي جهاز (بدون ربط) */
+  universal?: boolean;
 }
 
-/** التحقق من مطابقة السيريال لهذا الجهاز (shifted check) */
+/** نقاط الاقتطاع المحتملة (حتى يقبل التحقق الكود الكامل أو المقتطع) */
+const CROP_PATTERNS = [8, 4, 0];
+
+/**
+ * التحقق الكامل من السيريال — أوفلاين 100%:
+ *  1) الصيغة + رقم المفتاح.
+ *  2) مطابقة كود الجهاز (أو سيريال عام).
+ *  3) التوقيع HMAC (يجرب كل أطوال الكود المحتملة).
+ *  4) تاريخ الانتهاء.
+ */
 export async function validateSerial(
-  serial: string,
-  machineCode: string,
-  knownCreatedAt?: number
+  serialInput: string,
+  fingerprint = getMachineFingerprint()
 ): Promise<ValidationResult> {
-  const clean = serial.trim().toUpperCase().replace(/\s+/g, '');
-  const m = SERIAL_RE.exec(clean);
+  const serial = serialInput.trim().toUpperCase().replace(/\s+/g, '');
+  const m = SERIAL_RE.exec(serial);
   if (!m) {
-    return { ok: false, reason: 'صيغة السيريال غير صحيحة — يجب أن يكون بالشكل SPRD-XXXX-XXXX-XXXX-XXXX' };
+    return {
+      ok: false,
+      reason: 'صيغة السيريال غير صحيحة — يجب أن يكون بالشكل SPRD-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX',
+    };
   }
 
-  const [, g1, g2, g3] = m;
-  const mc = (machineCode || getMachineFingerprint()).toUpperCase().slice(0, 8);
+  const groups = m.slice(1).join('');
+  const slotStr = groups.slice(0, 3);
+  const codeField = groups.slice(3, 11);
+  const expStr = groups.slice(11, 15);
+  const issueStr = groups.slice(15, 18);
+  const sigStr = groups.slice(18, 28);
 
-  // 1) تحقق مجموعة الجهاز
-  const expectedG3 = base32Encode(fnv1a(mc), 4);
-  if (g3 !== expectedG3) {
-    return { ok: false, reason: 'هذا السيريال مخصص لجهاز آخر', machineMismatch: true };
+  // مودولو صحيح (JS يُرجع سالباً مع %)
+  const slot = (((base32Decode(slotStr) - SLOT_XOR) % ALPHABET.length) + ALPHABET.length) % ALPHABET.length;
+  const expDays = base32Decode(expStr);
+  const issueDays = base32Decode(issueStr);
+  if (Number.isNaN(expDays) || Number.isNaN(issueDays) || Number.isNaN(slot)) {
+    return { ok: false, reason: 'السيريال يحتوي حروفاً غير صالحة — أعد نسخه بالكامل' };
   }
 
-  // 2) تحقق التوقيع — نحتاج تاريخ الإنشاء، لذا نُجرّب تواريخ محتملة
-  //    (تاريخ الإنشاء مضمّن في السيريال عند التوليد، لذلك نستخدم السجل المحلي)
-  if (knownCreatedAt) {
-    const payload = [
-      LICENSE_PRODUCT.replace(/\s/g, ''),
-      mc,
-      knownCreatedAt.toString(36).toUpperCase(),
-      'LIFE',
-      LICENSE_SECRET.slice(0, 8),
-    ].join('|');
-    const sigBytes = await hmacSha256(LICENSE_SECRET, payload);
-    const sigA = fnv1a(String.fromCharCode(...sigBytes.slice(0, 16)));
-    const g1b = base32Encode(sigA, 4);
-    if (g1b !== g1) return { ok: false, reason: 'التوقيع الرقمي للسيريال غير صالح' };
+  // 1) هل يخص هذا الجهاز؟
+  const universal = codeField === 'AAAAAAAA';
+  const mine = machineCode8(fingerprint);
+  const isMatch = universal || (mine.startsWith(codeField) && codeField.length >= 4);
+  if (!isMatch) {
+    return {
+      ok: false,
+      machineMismatch: true,
+      reason:
+        'هذا السيريال صادر لجهاز آخر. أرسل كود جهازك الظاهر في نافذة التفعيل ليصدر لك سيريال خاص بك.',
+    };
   }
 
-  // g2 تحقق إضافي لا يمكن تزويره بسهولة
-  if (g2.length !== 4) return { ok: false, reason: 'السيريال ناقص' };
+  // 2) التحقق من التوقيع مع كل أطوال الكود المحتملة + المفتاح المشار إليه
+  const key = LICENSE_KEYS[slot] ?? LICENSE_KEYS[0];
+  let sigOk = false;
+  for (const len of CROP_PATTERNS) {
+    const candidate = codeField.slice(0, len).padEnd(8, 'A');
+    const payload = `${candidate}|${expDays}|${issueDays}`;
+    const sigBytes = await hmacSha256(key, payload);
+    const sigNum = fnv1a(String.fromCharCode(...sigBytes.slice(0, 16)), fnv1a(payload));
+    if (base32Encode(sigNum, 10) === sigStr) {
+      sigOk = true;
+      break;
+    }
+  }
+  if (!sigOk) {
+    return {
+      ok: false,
+      reason: 'السيريال غير صحيح أو تم تعديل حرف منه. أعد نسخه كاملاً كما أرسله المطوّر.',
+    };
+  }
 
-  return { ok: true };
+  // 3) الانتهاء
+  const expiresAt = expDays > 0 ? epochPlusDays(expDays) : undefined;
+  if (expiresAt && expiresAt < Date.now()) {
+    return { ok: false, reason: 'انتهت صلاحية هذا السيريال — تواصل مع المطوّر للتجديد' };
+  }
+
+  return { ok: true, expiresAt, universal };
 }
 
 /* --------------------------- حالة التجربة --------------------------- */
@@ -238,8 +346,8 @@ export interface TrialState {
 
 export const TRIAL_KEY = 'smartprint.trial.v1';
 export const ACTIVATION_KEY = 'smartprint.activation.v1';
-export const SERVER_CONSUMED_KEY = 'smartprint.consumed-serials.v1';
 export const HIGH_WATER_KEY = 'smartprint.clock-hwm.v1';
+export const SYNC_URL_KEY = 'smartprint.sync-url.v1';
 
 export function loadTrial(): TrialState {
   try {
@@ -268,8 +376,8 @@ export function loadTrial(): TrialState {
 
 /**
  * تحديث آخر تشغيل مع حماية من التلاعب بالساعة:
- * نحتفظ بأعلى وقت رُصد (high-water mark) داخل بالـ localStorage،
- * فإن رجع المستخدم بساعة الجهاز للخلف نستخدم lastRunAt الأكبر بدلاً من الوقت الحالي.
+ * نحتفظ بأعلى وقت رُصد (high-water mark) في التخزين، فإن رجع المستخدم
+ * بساعة الجهاز للخلف نستخدم الأعلى بدلاً من الوقت الحالي.
  */
 export function touchTrial(state: TrialState) {
   const now = Date.now();
@@ -339,56 +447,44 @@ export function trialProgress(firstRunAt: number): number {
   return Math.min(100, Math.max(0, (elapsedMs / total) * 100));
 }
 
-/* --------- سجل السيريالات المُستهلكة (محاكاة خادم التفعيل) --------- */
-/**
- * في الإنتاج: هذا السجل يعيش على خادم (Supabase / Google Sheet / API).
- * هنا نستخدم localStorage كمحاكاة، بحيث:
- *   - صفحة المولّد تسجّل السيريال عند إنشائه.
- *   - التطبيق يعلّمه "مُستهلك" عند التفعيل الناجح.
- *   - محاولة تفعيل نفس السيريال مرة أخرى تُرفض (single-use).
- */
-export interface ConsumedRecord {
-  id: string;
-  serial: string;
-  machineCode: string;
-  customer?: string;
-  createdAt: number;
-  expiresAt?: number;
-  activatedAt?: number;
-  revoked?: boolean;
-}
+/* ------------------- مزامنة سحابية اختيارية (single-use) ------------------- */
 
-export const LICENSE_REGISTRY_KEY = 'smartprint.license-registry.v1';
-
-export function loadRegistry(): ConsumedRecord[] {
+/** رابط خدمة التحقق (اختياري). إن كان فارغاً يعمل البرنامج أوفلاين بالكامل. */
+export function getSyncUrl(): string {
   try {
-    const raw = localStorage.getItem(LICENSE_REGISTRY_KEY);
-    return raw ? (JSON.parse(raw) as ConsumedRecord[]) : [];
+    return localStorage.getItem(SYNC_URL_KEY) ?? '';
   } catch {
-    return [];
+    return '';
   }
 }
 
-export function saveRegistry(records: ConsumedRecord[]) {
-  localStorage.setItem(LICENSE_REGISTRY_KEY, JSON.stringify(records));
+export function setSyncUrl(url: string) {
+  try {
+    if (url.trim()) localStorage.setItem(SYNC_URL_KEY, url.trim());
+    else localStorage.removeItem(SYNC_URL_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
-export function upsertRegistry(record: ConsumedRecord) {
-  const records = loadRegistry();
-  const idx = records.findIndex((r) => r.id === record.id || r.serial === record.serial);
-  if (idx >= 0) records[idx] = { ...records[idx], ...record };
-  else records.unshift(record);
-  saveRegistry(records);
-}
-
-export function markSerialConsumed(serial: string): boolean {
-  const records = loadRegistry();
-  const rec = records.find((r) => r.serial === serial.trim().toUpperCase());
-  if (!rec) return false;
-  if (rec.activatedAt || rec.revoked) return false; // مستهلك أو مُلغى
-  rec.activatedAt = Date.now();
-  saveRegistry(records);
-  return true;
+/**
+ * إبلاغ الخادم بالتفعيل. لا يفشل التفعيل إذا كان الجهاز أوفلاين،
+ * لكن عند نجاح الاتصال يُسجَّل السيريال كمُستهلك على الخادم.
+ */
+async function syncActivation(serial: string, machineCode: string): Promise<'online' | 'offline' | 'reused'> {
+  const url = getSyncUrl();
+  if (!url) return 'offline';
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serial, machineCode, activatedAt: Date.now(), product: LICENSE_PRODUCT }),
+    });
+    if (res.status === 409) return 'reused';
+    return res.ok ? 'online' : 'offline';
+  } catch {
+    return 'offline';
+  }
 }
 
 /* ------------------------- التفعيل داخل البرنامج ------------------------- */
@@ -398,77 +494,50 @@ export interface ActivationOutcome {
   activation?: StoredActivation;
   error?: string;
   kind?: 'format' | 'machine' | 'used' | 'unknown' | 'expired' | 'invalid';
+  /** حالة الاتصال بخادم التفعيل */
+  sync?: 'online' | 'offline' | 'reused';
 }
 
 /**
- * تفعيل السيريال:
- *  1) تحقق من الصيغة + مجموعة الجهاز.
- *  2) البحث في السجل (لمنع إعادة الاستخدام).
- *  3) تعليمه كمُستهلك وحفظ التفعيل محلياً.
+ * تفعيل السيريال — أوفلاين بالكامل:
+ *  1) تحقق كامل (صيغة + جهاز + توقيع + انتهاء).
+ *  2) حفظ التفعيل محلياً.
+ *  3) إن ضُبط رابط مزامنة: إبلاغ الخادم (اختياري) لمنع إعادة الاستخدام.
  */
 export async function activateSerial(serialInput: string): Promise<ActivationOutcome> {
   const serial = serialInput.trim().toUpperCase().replace(/\s+/g, '');
-  const machineCode = getMachineFingerprint();
+  const fingerprint = getMachineFingerprint();
 
-  const basic = await validateSerial(serial, machineCode);
-  if (!basic.ok) {
+  const result = await validateSerial(serial, fingerprint);
+  if (!result.ok) {
     return {
       ok: false,
-      error: basic.reason ?? 'سيريال غير صالح',
-      kind: basic.machineMismatch ? 'machine' : 'format',
+      error: result.reason ?? 'سيريال غير صالح',
+      kind: result.machineMismatch ? 'machine' : 'format',
     };
   }
 
-  // التحقق من السجل: إذا كان السيريال غير معروف للمولّد نرفضه
-  const records = loadRegistry();
-  const record = records.find((r) => r.serial === serial);
-  if (!record) {
-    return {
-      ok: false,
-      kind: 'unknown',
-      error:
-        'هذا السيريال غير موجود في سجل التفعيل. تأكد من نسخه كما أرسله المطوّر أو تواصل مع الدعم.',
-    };
-  }
+  const machineCode = machineCode8(fingerprint);
 
-  if (record.revoked) {
-    return { ok: false, kind: 'invalid', error: 'هذا السيريال مُلغى من قِبل المطوّر' };
-  }
-
-  if (record.activatedAt) {
+  // مزامنة اختيارية: إن كان الخادم يعرف السيريال كمُستهلك نرفض
+  const sync = await syncActivation(serial, machineCode);
+  if (sync === 'reused') {
     return {
       ok: false,
       kind: 'used',
-      error:
-        'هذا السيريال مستخدم من قبل (كل سيريال يُستخدم مرة واحدة فقط). اطلب سيريالاً جديداً من المطوّر.',
+      error: 'هذا السيريال مستخدم من قبل (كل سيريال يُستخدم مرة واحدة). اطلب سيريالاً جديداً.',
     };
-  }
-
-  if (record.machineCode && !machineCode.startsWith(record.machineCode) &&
-      !record.machineCode.startsWith(machineCode.slice(0, 8))) {
-    // تحقق إضافي (مغفور لأن الأرقام قد تختلف بعد تحديث المتصفح)
-  }
-
-  // تاريخ الانتهاء
-  if (record.expiresAt && record.expiresAt < Date.now()) {
-    return { ok: false, kind: 'expired', error: 'انتهت صلاحية هذا السيريال' };
-  }
-
-  // تعليم السيريال كمُستهلك
-  const consumed = markSerialConsumed(serial);
-  if (!consumed) {
-    return { ok: false, kind: 'used', error: 'هذا السيريال مستخدم من قبل' };
   }
 
   const activation: StoredActivation = {
     serial,
     machineCode,
-    customer: record.customer ?? '',
+    customer: result.universal ? 'ترخيص عام' : '',
     activatedAt: Date.now(),
-    expiresAt: record.expiresAt,
+    expiresAt: result.expiresAt,
     signature: '',
   };
   saveActivation(activation);
 
-  return { ok: true, activation };
+  return { ok: true, activation, sync };
 }

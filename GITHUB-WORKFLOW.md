@@ -1,235 +1,226 @@
-# 🤖 دليل Workflow الـ GitHub — SMART PRINT
+# 🤖 دليل التشغيل — GitHub Actions + توليد التفعيل + ربط صفحة المولّد
 
-## نظرة عامة على المسار
-
-```
-تكتب الكود محلياً
-      ↓
-git add / commit
-      ↓
-git push ──► GitHub (فرع)
-      ↓
-فتح Pull Request
-      ↓
-┌─────────────────────────────────────────┐
-│ GitHub Actions يشتغل تلقائياً:          │
-│  1. Checkout                            │
-│  2. Setup .NET 8 SDK                    │
-│  3. dotnet restore / publish            │
-│  4. رفع SMART_PRINT_Win11_x64.exe       │
-│     في Artifacts                        │
-└─────────────────────────────────────────┘
-      ↓
-Merge PR في main
-      ↓
-git tag v1.0.0 && git push --tags
-      ↓
-GitHub Release تلقائياً + ملف .exe مرفق ✅
-```
+> **كل الأوامر تُنفَّذ من مجلد المشروع** — من CMD أو PowerShell أو Git Bash.
 
 ---
 
-## 1️⃣ الـ Workflow الحالي (`.github/workflows/build.yml`)
+## الجزء الأول: GitHub Actions (الـ Workflow)
 
-```yaml
-name: Build SMART PRINT Windows Executable
+### 1. ارفع الكود (إن لم تكن فعلت)
 
-on:
-  push:
-    branches: ["main", "master"]
-  pull_request:
-    branches: ["main", "master"]
-  workflow_dispatch:        # تشغيل يدوي من تبويب Actions
-
-jobs:
-  build-and-publish:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4                  # 1) جلب الكود
-      - uses: actions/setup-dotnet@v4             # 2) تنصيب .NET 8
-        with:
-          dotnet-version: '8.0.x'
-      - uses: actions/cache@v4                    # 3) كاش NuGet (أسرع)
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-      - run: dotnet restore SmartPrint.csproj     # 4) استعادة الحزم
-      - run: >                                    # 5) البناء النهائي
-          dotnet publish SmartPrint.csproj -c Release -r win-x64
-          --self-contained true -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:EnableCompressionInSingleFile=true -o ./publish
-      - run: Move-Item ./publish/SmartPrint.exe ./publish/SMART_PRINT_Win11_x64.exe
-      - uses: actions/upload-artifact@v4          # 6) رفع الملف
-        with:
-          name: SMART-PRINT-Windows11-Setup
-          path: ./publish/SMART_PRINT_Win11_x64.exe
-          retention-days: 30
-```
-
-**ما يحدث عملياً:**
-| الحدث | النتيجة |
-|---|---|
-| `git push` على أي فرع | البناء يعمل، لكن الملف يظهر في Artifacts فقط |
-| فتح PR | البناء يعمل كاختبار ✅/❌ قبل الدمج |
-| `workflow_dispatch` | تشغيل يدوي من **Actions → Run workflow** |
-| `git tag v1.0.0` + push | **Release** تلقائي بملف `.exe` مرفق |
-
----
-
-## 2️⃣ كيف تحصل على أول نسخة (خطوة بخطوة)
-
-### أولاً: جهّز الريبو على جهازك
 ```bash
-git clone https://github.com/waelsamir28/alg-print.git
-cd alg-print
-```
-
-### ثانياً: ارفع الملفات المطلوبة للبناء
-```bash
-# ملف الـ workflow
-mkdir -p .github/workflows
-# انسخ build.yml من مستكشف الكود داخل البرنامج → Save as .github/workflows/build.yml
-
-# ملف المشروع C#
 git add .
-git commit -m "ci: add build workflow + license service"
+git commit -m "feat: license system + keygen"
 git push origin main
 ```
 
-### ثالثاً: راقب البناء
-1. افتح `https://github.com/waelsamir28/alg-print/actions`
-2. اضغط على آخر تشغيل → ستشاهد الخطوات واحدة واحدة ✅
-3. في نهاية التشغيل، انزل لأسفل الصفحة → **Artifacts**
-4. حمّل **SMART-PRINT-Windows11-Setup.zip** → بداخله `SMART_PRINT_Win11_x64.exe`
+بمجرد الـ push، GitHub Actions يشتغل تلقائياً.
 
-### رابعاً (الأفضل): أنشئ Release رسمي
+### 2. شاهد البناء
+
+1. افتح: `https://github.com/waelsamir28/alg-print/actions`
+2. ستجد تشغيلاً باسم **✅ Build & Verify (React App)**
+3. اضغط عليه → تشاهد الخطوات:
+   - Checkout ✅
+   - Setup Node 20 ✅
+   - Install dependencies ✅
+   - **TypeScript check** ← يكشف أي خطأ قبل النشر
+   - Build ✅
+   - Upload built app ✅
+
+### 3. نزّل ملف البرنامج
+
+في صفحة التشغيل ↓ أسفل الصفحة → قسم **Artifacts**
+→ اضغط **SMART-PRINT-Web-Build** → تحميل ZIP → بداخله `index.html`
+
+هذا الملف **هو البرنامج كامل** — افتحه بأي متصفح (Chrome/Edge) ويعمل **بدون إنترنت**.
+
+### 4. أعمل أول إصدار رسمي (Release)
+
 ```bash
-git tag -a v1.0.0 -m "SMART PRINT v1.0.0 — أول نسخة رسمية"
+git tag -a v1.0.0 -m "SMART PRINT v1.0.0 — أول إصدار"
 git push origin v1.0.0
 ```
-→ يشتغل البناء تلقائياً وينشئ **Release** في:
+
+→ يشتغل **🚀 Release** تلقائياً وينشئ صفحة إصدار عليها الملف جاهز للتحميل:
 `https://github.com/waelsamir28/alg-print/releases`
 
----
-
-## 3️⃣ الأسرار (Secrets) المطلوبة
-
-اذهب إلى **Settings → Secrets and variables → Actions** وأضف:
-
-| الاسم | الاستخدام |
-|---|---|
-| `GITHUB_TOKEN` | موجود تلقائياً — يُستخدم لنشر الـ Release |
-| `LICENSE_SECRET` | (مقترح) مفتاح توليد السيريالات — **لا تضعه في الكود** |
-| `VERIFY_API_URL` | (مقترح) رابط خادم التحقق من التفعيل |
-
-> ⚠️ **مهم:** لا تضع مفتاح الترخيص داخل الكود المصدري. اقرأه من الـ Secret:
-> ```csharp
-> var secret = Environment.GetEnvironmentVariable("SMART_LICENSE_SECRET");
-> ```
-
----
-
-## 4️⃣ الـ Workflow الخاص بصفحة التفعيل (اختياري لكن مُوصى به)
-
-لتُنشر صفحة التفعيل (`#/activate`) على نطاق خاص بك:
-
-```yaml
-name: Deploy Activation Site
-
-on:
-  push:
-    branches: [main]
-    paths: ['src/components/ActivationSite.tsx', 'src/utils/license.ts']
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - run: npm ci && npm run build
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-```
-→ ستصبح صفحة التفعيل على: `https://waelsamir28.github.io/alg-print/#/activate`
-
----
-
-## 5️⃣ الفحص التلقائي (CI) — ماذا يتأكد منه؟
-
-| الخطوة | الأمر | النتيجة |
-|---|---|---|
-| فحص TypeScript | `npx tsc --noEmit` | يكشف أخطاء الأنواع قبل البناء |
-| البناء | `npm run build` | يتأكد أن الواجهة تُبنى كملف واحد |
-| C# build | `dotnet publish` | ينتج `.exe` مستقل ناجح |
-
-أضفهم كـ workflow للواجهة:
-
-```yaml
-name: Verify Web Build
-on: [push, pull_request]
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'npm' }
-      - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npm run build
-```
-
----
-
-## 6️⃣ إصدار نسخة جديدة لاحقاً (v1.1.0 مثلاً)
+### 5. إصدار تحديث لاحقاً
 
 ```bash
-# 1) حدّث رقم الإصدار
-#    - في src/components/SettingsPage.tsx (تبويب "معلومات البرنامج")
-#    - في README.md
-git add . && git commit -m "chore: bump version to 1.1.0"
-
-# 2) أنشئ tag جديد
-git tag -a v1.1.0 -m "v1.1.0 — ميزات جديدة"
+# عدّل الكود ثم:
+git add . && git commit -m "feat: تحديث كذا"
+git tag -a v1.0.1 -m "v1.0.1"
 git push origin main --tags
 ```
-→ Release جديد تلقائياً مع الـ `.exe` المحدث.
+
+> **الملخص:** `push` = بناء وفحص · `tag v*` = إصدار منشور قابل للتحميل.
 
 ---
 
-## 7️⃣ استكشاف الأخطاء الشائعة
+## الجزء الثاني: توليد سيريال التفعيل
 
-| المشكلة | السبب | الحل |
-|---|---|---|
-| ❌ فشل البناء في Actions | مشروع C# ناقص/خطأ في csproj | راجع تبويب Actions → Logs ← رسالة `error CS....` |
-| ❌ `dotnet: command not found` | لم يُنصّب SDK | تأكد من وجود خطوة `setup-dotnet@v4` |
-| ⚠️ لا يظهر Artifact | الملف في مسار آخر | تحقق من `path:` في `upload-artifact` |
-| ⚠️ Release لم يُنشأ | لم يتم push للـ tag | `git push origin v1.0.0` |
-| 🔒 فشل الدفع للـ GitHub | مشكلة صلاحيات | راجع إعدادات الأمان في تبويب Settings |
+### الطريقة (أ) — المولّد المستقل (الأسهل والأسرع) ⭐
 
----
+الملف: **`smartprint-keygen.html`** (32 كيلوبايت، ملف واحد)
 
-## 8️⃣ نصائح أمنية للترخيص عند النشر الحقيقي
+**خصائصه:**
+- ✅ يعمل من **أي مكان** — على جهازك مباشرة (دبل كليك)
+- ✅ يعمل **بدون إنترنت** تماماً — كل الحساب داخل المتصفح
+- ✅ يمكن وضعه على **فلاشة** أو موبايل أو أي استضافة خاصة
+- ✅ فيه سجل للسيريالات + تصدير CSV + إرسال واتساب + طباعة
 
-1. **لا تضع `LICENSE_SECRET` في الكود** — استخدم متغير بيئة/Secret.
-2. **صفحة التفعيل يجب أن تكون محمية** بتسجيل دخول (Supabase Auth / Cloudflare Access) — ليست مفتوحة للعامة.
-3. **سجل السيريالات يجب أن يعيش على خادم**، لا في localStorage، حتى يستحيل تفعيل نفس السيريال على جهازين.
-4. **واتساب/الدفع:** يمكنك استخدام WhatsApp Cloud API + Google Sheets لتسجيل كل تفعيل تلقائياً.
-5. **إعادة التفعيل:** في حال تغيير الجهاز، يمكنك من لوحة التفعيل استخدام زر «إتاحة للاستخدام» وتوليد سيريال جديد — أو تمديد السجل.
+**طريقة الاستخدام:**
 
----
+1. العميل يفتح البرنامج → زر **«تفعيل»** → ينسخ **كود الجهاز** (8 خانات، مثال: `BRVREQDA`)
+2. يرسله لك على واتساب
+3. تفتح أنت `smartprint-keygen.html` → تدخل رمزك (`1234`) → تلصق الكود
+4. تكتب اسم العميل (اختياري) وتختار الصلاحية (مدى الحياة افتراضياً)
+5. تضغط **🔑 توليد السيريال** → يظهر السيريال
+6. **📋 نسخ** → تبعته للعميل → يلصقه → **مُفعَّل مدى الحياة**
 
-## 🎯 الخلاصة في 5 أوامر
+**لإعادة بناء الملف بالمفاتيح الصحيحة** (على جهازك):
 
 ```bash
-git add .
-git commit -m "feat: licensing + PDF tools + OCR + diff + compressor"
-git push origin main
-git tag -a v1.0.0 -m "أول نسخة رسمية"
-git push origin v1.0.0     # ← هذا الذي ينشئ الإصدار على GitHub
+# Windows CMD
+set LICENSE_KEYS=WAEL-ELGAMAL-SMARTPRINT-2026-®-KEY,SMARTPRINT-2026-SLOT-B-GAMAL-9F3C7A21,SMARTPRINT-2026-SLOT-C-NILE-4D8B55E0
+set KEYGEN_PIN=1234
+node scripts/build-keygen.mjs
 ```
+
+```powershell
+# PowerShell
+$env:LICENSE_KEYS="WAEL-ELGAMAL-SMARTPRINT-2026-®-KEY,SMARTPRINT-2026-SLOT-B-GAMAL-9F3C7A21,SMARTPRINT-2026-SLOT-C-NILE-4D8B55E0"
+$env:KEYGEN_PIN="1234"
+node scripts/build-keygen.mjs
+```
+
+**النتيجة:** `dist-private/smartprint-keygen.html`
+
+> ⚠️ **مهم جداً:** هذا الملف يحتوي مفاتيح التوقيع. المستودع **عام**، لذلك:
+> - `license-tool/` و `dist-private/` مضافان إلى `.gitignore` — لا يُرفعان أبداً.
+> - لا ترسله لأي عميل. احتفظ به على جهازك/فلاشة.
+
+### الطريقة (ب) — من GitHub Actions (بدون كود على جهازك)
+
+1. **Settings → Secrets and variables → Actions → New repository secret**
+
+| الاسم | القيمة |
+|---|---|
+| `LICENSE_KEYS` | مفاتيحك مفصولة بفاصلة (نفس الثلاثة أعلاه) |
+| `KEYGEN_PIN` | رمز دخولك مثل `1234` |
+
+2. اعمل أي push → الـ Action يبني المولّد **بمفاتيحك من الـ Secret**
+3. نزّله من **Artifacts → SMART-PRINT-Developer-Keygen-PRIVATE** (يُحذف بعد 7 أيام تلقائياً)
+
+المفاتيح لا تظهر في المستودع ولا في اللوجات.
+
+---
+
+## الجزء الثالث: ربط صفحة المولّد / نشرها
+
+### الخيار 1 — أوفلاين على جهازك (الأكثر أماناً) 🥇
+
+احفظ `smartprint-keygen.html` في مجلد على جهازك، واعمل له اختصاراً على الديسكتوب.
+افتحه بالدبل كليك = شغّال. **لا يحتاج أي استضافة ولا إنترنت.**
+
+### الخيار 2 — على موبايلك (بدون إنترنت)
+
+أرسل الملف لنفسك على واتساب (Saved Messages) → نزّله → افتحه بالمتصفح.
+معظم متصفحات الموبايل تفتح ملفات HTML المحلية.
+
+### الخيار 3 — رفعه على استضافة خاصة (مع حماية)
+
+**على Cloudflare Pages / Netlify (Drag & Drop):**
+1. اذهب إلى `app.netlify.com/drop`
+2. اسحب ملف `smartprint-keygen.html` فقط
+3. ستحصل على رابط مثل `https://xxxx.netlify.app/smartprint-keygen.html`
+4. **مهم:** اضغط `Site settings → Access control → Password protection`
+   وضع كلمة سر قوية، حتى لا يصل أحد للمولّد.
+
+**أو على GitHub Pages لمستودع خاص منفصل:**
+```bash
+# أنشئ مستودعاً خاصاً جديداً باسم smartprint-keys
+mkdir smartprint-keys && cd smartprint-keys
+cp ../dist-private/smartprint-keygen.html index.html
+git init && git add . && git commit -m "keygen"
+git remote add origin https://github.com/waelsamir28/smartprint-keys.git
+git push -u origin main
+```
+ثم: `Settings → Pages → Deploy from branch → main / root`
+→ الرابط: `https://waelsamir28.github.io/smartprint-keys/`
+> ملاحظة: GitHub Pages على مستودع **خاص** يتطلب خطة مدفوعة. الحل المجاني: Netlify مع كلمة سر.
+
+### الخيار 4 — ربطه بالبرنامج (كمسار داخلي محمي)
+
+إذا أردت فتح المولّد من داخل البرنامج نفسه في وضع التطوير فقط:
+ضع الملف في `public/` باسم آخر وشغّل البرنامج بـ `npm run dev`،
+ثم افتح `http://localhost:5173/keygen.html`.
+> لا تضع الملف في `public/` عند البناء للنشر — سيُضمَّن في الملف النهائي ويُسرَّب.
+
+---
+
+## الجزء الرابع: مسار التفعيل كاملاً (من التثبيت للتفعيل)
+
+```
+┌─ العميل ────────────────────────┐        ┌─ أنت (المطوّر) ──────────────┐
+│ 1. يفتح البرنامج                │        │                              │
+│ 2. يعمل 15 يوم تجربة كاملة      │        │                              │
+│ 3. بعد 15 يوم: شاشة قفل         │        │                              │
+│ 4. ينسخ كود الجهاز BRVREQDA     │        │                              │
+│ 5. يرسله واتساب ────────────────┼───────►│ 6. يفتح المولّد              │
+│                                 │        │ 7. يدخل الرمز 1234           │
+│                                 │        │ 8. يلصق BRVREQDA             │
+│                                 │        │ 9. يولّد السيريال            │
+│ 11. يلصقه ويضغط تفعيل ◄─────────┼────────┤10. يبعته واتساب              │
+│ 12. ✅ مُفعَّل مدى الحياة أوفلاين │        │                              │
+└─────────────────────────────────┘        └──────────────────────────────┘
+```
+
+**لماذا لا يعمل سيريال العميل على جهاز آخر؟**
+السيريال يحتوي 8 خانات مشفّرة من بصمة الجهاز + توقيع HMAC عليها.
+لو غيّر أي حرف → التوقيع يفشل. لو أخذ سيريال جهاز صديقه → خانتا الجهاز لا تتطابقان.
+
+---
+
+## الجزء الخامس: أسئلة سريعة
+
+**س: هل يحتاج العميل إنترنت للتفعيل؟**
+لا. التفعيل يتم بالكامل داخل المتصفح بمقارنة التوقيع. الإنترنت مطلوب فقط لاستلام السيريال منك.
+
+**س: هل السيريال يُستخدم مرة واحدة؟**
+أوفلاين: يُفعَّل على جهاز واحد فقط (بسبب ربط الجهاز). لمنع إعادة الاستخدام على نفس الجهاز بعد
+إزالة التفعيل، استخدم **الخيار السحابي**: أضف رابط خدمة في `SYNC_URL` (اختياري) فيسجّل كل تفعيل.
+
+**س: كيف ألغي سيريال عميل؟**
+أوفلاين لا يمكن الإلغاء عن بُعد (البرنامج لا يتصل بالشبكة). عملياً: أصدر له ترخيصاً منتهي الصلاحية
+أو غيّر المفاتيح في الإصدار القادم. الخيار السحابي يحل هذا أيضاً.
+
+**س: نسيت رمز المولّد؟**
+أعد بناءه بـ `KEYGEN_PIN` جديد.
+
+**س: هل يمكن كسر النظام؟**
+أي برنامج يعمل على جهاز العميل يمكن كسره نظرياً. هنا الكسر يحتاج: استخراج المفاتيح من الملف +
+إعادة بناء التوقيع. لذلك **لا تنشر ملف المولّد**، وغيّر المفتاح الأساسي مع كل إصدار كبير.
+
+---
+
+## الأوامر في سطر واحد (مرجع سريع)
+
+```bash
+# بناء وفحص
+npx tsc --noEmit && npm run build
+
+# تشغيل محلي
+npm run dev
+
+# إصدار جديد
+git tag -a v1.0.1 -m "v1.0.1" && git push origin main --tags
+
+# بناء المولّد الخاص
+node scripts/build-keygen.mjs     # بعد ضبط LICENSE_KEYS و KEYGEN_PIN
+```
+
+---
+
+تصميم وتنفيذ **م/ وائل الجمال** — 01222355769

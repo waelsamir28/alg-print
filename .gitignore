@@ -3,3 +3,9 @@ dist/
 .DS_Store
 *.local
 .vite/
+
+# ⚠️ مولّد السيريالات يحتوي مفاتيح التوقيع — لا يُرفع على مستودع عام
+license-tool/*.html
+license-tool/
+dist-private/
+/smartprint-keygen.html

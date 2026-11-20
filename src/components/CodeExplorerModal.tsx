@@ -9,8 +9,7 @@ import {
   X,
   Search,
   Terminal,
-  Sparkles,
-  KeyRound
+  Sparkles
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { CSHARP_PROJECT_FILES, SourceCodeFile } from '../data/csharpSourceCode';
@@ -104,16 +103,6 @@ export const CodeExplorerModal: React.FC<CodeExplorerModalProps> = ({ isOpen, on
           </div>
 
           <div className="flex items-center gap-2 relative z-10">
-            {/* رابط صفحة تفعيل المطوّر */}
-            <a
-              href="#/activate"
-              className="btn-pop flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/25 text-white font-bold rounded-xl text-xs"
-              title="صفحة توليد سيريالات التفعيل (خاصة بالمطوّر)"
-            >
-              <KeyRound className="w-4 h-4" />
-              <span className="hidden sm:inline">صفحة التفعيل</span>
-            </a>
-
             {/* Download Solution ZIP button */}
             <button
               onClick={handleDownloadZip}

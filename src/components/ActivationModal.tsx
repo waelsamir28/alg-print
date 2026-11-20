@@ -15,6 +15,7 @@ import {
   MonitorSmartphone,
 } from 'lucide-react';
 import { useLicense, TRIAL_DAYS } from '../context/LicenseContext';
+import { machineCode8 } from '../utils/license';
 import { BrandLogo } from './BrandLogo';
 
 interface ActivationModalProps {
@@ -45,11 +46,13 @@ export const ActivationModal: React.FC<ActivationModalProps> = ({
 
   const isActivated = status === 'activated';
   const expired = reason === 'expired';
+  /** الكود الكامل (8 خانات) المطلوب في مولّد السيريالات */
+  const fullCode = machineCode8(machineCode);
 
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(
-        `كود الجهاز: ${shortCode}\nمعرّف كامل: ${machineCode}\nالبرنامج: SMART PRINT`
+        `كود الجهاز: ${fullCode}\nالبرنامج: SMART PRINT`
       );
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
@@ -73,7 +76,7 @@ export const ActivationModal: React.FC<ActivationModalProps> = ({
   };
 
   const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
-    `السلام عليكم م/ وائل، أرغب في تفعيل برنامج SMART PRINT.\nكود الجهاز: ${shortCode}\nمعرّف الجهاز: ${machineCode}`
+    `السلام عليكم م/ وائل، أرغب في تفعيل برنامج SMART PRINT.\nكود الجهاز: ${fullCode}`
   )}`;
 
   return (
@@ -162,15 +165,16 @@ export const ActivationModal: React.FC<ActivationModalProps> = ({
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xl font-black font-mono tracking-[0.2em] text-gray-900">
-                    {shortCode}
+                  <span className="text-2xl font-black font-mono tracking-[0.2em] text-gray-900">
+                    {fullCode}
                   </span>
                   <span className="text-[9px] font-mono text-gray-400 truncate" dir="ltr">
                     {machineCode}
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 mt-1 leading-snug">
-                  أرسل هذا الكود للمطوّر للحصول على سيريال مخصص لجهازك.
+                  أرسل هذا الكود (8 خانات) للمطوّر ليصدر لك سيريال مخصص لجهازك.
+                  الكود يعمل على هذا الجهاز فقط، ولا يحتاج إنترنت للتفعيل.
                 </p>
               </div>
 
@@ -187,8 +191,8 @@ export const ActivationModal: React.FC<ActivationModalProps> = ({
                     setSerial(v);
                     setError(null);
                   }}
-                  onKeyDown={(e) => e.key === 'Enter' && serial.length >= 19 && submit()}
-                  placeholder="SPRD-XXXX-XXXX-XXXX-XXXX"
+                  onKeyDown={(e) => e.key === 'Enter' && serial.replace(/-/g, '').length >= 24 && submit()}
+                  placeholder="SPRD-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
                   dir="ltr"
                   className="w-full bg-gray-50 border-2 border-gray-300 rounded-xl px-3 py-3 text-sm font-mono font-bold text-center tracking-[0.15em] focus:outline-none focus:border-[var(--t-primary)] focus:ring-2 focus:ring-[var(--t-primary)]/20"
                 />
@@ -202,7 +206,7 @@ export const ActivationModal: React.FC<ActivationModalProps> = ({
 
                 <button
                   onClick={submit}
-                  disabled={busy || serial.replace(/-/g, '').length < 16}
+                  disabled={busy || serial.replace(/-/g, '').length < 24}
                   className="btn-pop btn-shine w-full mt-3 py-3 rounded-xl font-black text-sm text-white btn-primary-grad shadow-lg shadow-black/20 flex items-center justify-center gap-2 disabled:opacity-40 anim-gradient"
                 >
                   {busy ? (
@@ -214,7 +218,7 @@ export const ActivationModal: React.FC<ActivationModalProps> = ({
                 </button>
 
                 <p className="text-[10px] text-gray-400 text-center mt-2">
-                  ⓘ كل سيريال يُستخدم مرة واحدة فقط، ومخصص لجهاز واحد
+                  ⓘ السيريال مخصص لجهازك ومدى الحياة — التفعيل يتم بدون إنترنت
                 </p>
               </div>
 

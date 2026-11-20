@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { NavTabs } from './components/NavTabs';
 import { FooterBar } from './components/FooterBar';
@@ -19,7 +19,6 @@ import { useSettings } from './context/SettingsContext';
 import { useLicense } from './context/LicenseContext';
 import { ActivationModal, ActivationSuccessToast } from './components/ActivationModal';
 import { TrialBanner } from './components/TrialBanner';
-import { ActivationSite } from './components/ActivationSite';
 import { ContactPage } from './components/ContactPage';
 import { PdfToolsModal } from './components/PdfToolsModal';
 import { ImageCompressorModal } from './components/ImageCompressorModal';
@@ -44,16 +43,6 @@ export function App() {
   const { installed, setInstalled, uiScale, zoomIn, zoomOut, resetZoom } = useSettings();
   const { activeJob, enqueueJob, watermark } = useWorkspace();
   const { isLocked, status: licenseStatus } = useLicense();
-
-  // صفحة تفعيل المطوّر (مسار منفصل #/activate)
-  const [route, setRoute] = useState<string>(() =>
-    typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
-  );
-  useEffect(() => {
-    const onHash = () => setRoute(window.location.hash.replace('#', ''));
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
 
   // شاشات التثبيت والترحيب
   const [showSplash, setShowSplash] = useState<boolean>(false);
@@ -315,18 +304,6 @@ export function App() {
   const pagesPerSheet = layout === '2-up' ? 2 : layout === '4-up' ? 4 : layout === 'booklet' ? 4 : 1;
   const singleSideSheets = Math.max(1, Math.ceil(totalPages / pagesPerSheet));
   const totalPhysicalSheets = duplexMode !== 'simplex' ? Math.max(1, Math.ceil(singleSideSheets / 2)) : singleSideSheets;
-
-  // ───────── صفحة تفعيل المطوّر (منفصلة عن البرنامج) ─────────
-  if (route.startsWith('/activate')) {
-    return (
-      <ActivationSite
-        onExit={() => {
-          window.location.hash = '';
-          setRoute('');
-        }}
-      />
-    );
-  }
 
   // ───────── شاشة التثبيت (عند عدم التثبيت بعد) ─────────
   if (!installed) {
