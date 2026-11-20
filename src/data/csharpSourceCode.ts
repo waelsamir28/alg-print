@@ -1874,49 +1874,111 @@ namespace SmartPrint.Services
   {
     path: 'Services/LicenseService.cs',
     language: 'csharp',
-    description: 'خدمة الترخيص: فترة تجريبية 15 يوماً + التحقق من السيريال الموقّع (HMAC-SHA256)',
+    description: 'خدمة الترخيص: تجربة 15 يوماً + التحقق الأوفلاين من السيريال الموقّع (HMAC-SHA256) بأسلوب متعدد المفاتيح',
     category: 'Services',
     content: `using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SmartPrint.Services
 {
     /// <summary>
     /// إدارة ترخيص SMART PRINT:
-    ///  - فترة تجريبية 15 يوماً تُخزَّن في ProgramData.
-    ///  - التحقق من السيريال الموقَّع (HMAC-SHA256) المرتبط ببصمة الجهاز.
-    ///  - السيريال يُستهلك مرة واحدة عبر خادم التفعيل.
+    ///  - فترة تجريبية 15 يوماً تُخزَّن في ProgramData (محمية بـ DPAPI).
+    ///  - سيريال موقَّع HMAC-SHA256 مرتبط ببصمة الجهاز ويعمل أوفلاين 100%.
+    ///  - صيغة السيريال: SPRD-XXXX ×7 مجموعات (KKSG-KKSG...) بطول 28 خانة.
     /// </summary>
     public sealed class LicenseService
     {
-        private const string Product   = "SMARTPRINT";
-        private const int TrialDays    = 15;
-        private const string SecretKey = "WAEL-ELGAMAL-SMARTPRINT-2026-®-KEY"; // يبقى عند المطوّر
-        private const string VerifyUrl = "https://your-domain.com/api/verify-license";
+        private const string Product = "SMARTPRINT";
+        private const int    TrialDays = 15;
+
+        // مفاتيح التوقيع — المفتاح [0] هو الأساسي، أضف مفاتيح جديدة بدل حذف القديمة
+        private static readonly string[] Keys =
+        {
+            "WAEL-ELGAMAL-SMARTPRINT-2026-®-KEY",
+            "SMARTPRINT-2026-SLOT-B-GAMAL-9F3C7A21",
+            "SMARTPRINT-2026-SLOT-C-NILE-4D8B55E0",
+        };
+
+        private const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        private const int    SlotXor  = 0x5A;
+        private static readonly DateTime Epoch = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         private static readonly string DataDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SmartPrint");
-        private static readonly string TrialFile    = Path.Combine(DataDir, "trial.dat");
-        private static readonly string LicenseFile  = Path.Combine(DataDir, "license.dat");
+        private static readonly string TrialFile   = Path.Combine(DataDir, "trial.dat");
+        private static readonly string LicenseFile = Path.Combine(DataDir, "license.dat");
 
-        public bool IsActivated { get; private set; }
-        public int  DaysLeft    { get; private set; }
-        public string Serial    { get; private set; } = string.Empty;
+        public bool   IsActivated { get; private set; }
+        public int    DaysLeft    { get; private set; }
+        public string Serial      { get; private set; } = string.Empty;
 
         // ---------------------------------------------------------------
-        // بصمة الجهاز (Hardware fingerprint)
+        // أدوات Base32 / FNV-1a (مطابقة تماماً لنسخة الويب)
+        // ---------------------------------------------------------------
+        private static uint Fnv1a(string s, uint seed = 0x811C9DC5)
+        {
+            uint h = seed;
+            foreach (char c in s) { h ^= c; h = unchecked(h * 0x01000193u); }
+            return h;
+        }
+
+        private static string Base32Encode(uint num, int len)
+        {
+            var sb = new StringBuilder(len);
+            uint n = num;
+            for (int i = 0; i < len; i++) { sb.Append(Alphabet[(int)(n % 32)]); n /= 32; }
+            return sb.ToString();
+        }
+
+        private static uint Base32Decode(string str)
+        {
+            uint n = 0, mul = 1;
+            foreach (char ch in str)
+            {
+                int idx = Alphabet.IndexOf(ch);
+                if (idx < 0) return uint.MaxValue;
+                n += (uint)idx * mul;
+                mul *= 32;
+            }
+            return n;
+        }
+
+        private static byte[] Hmac(string key, string message)
+        {
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key));
+            return hmac.ComputeHash(Encoding.UTF8.GetBytes(message));
+        }
+
+        private static string SigOf(string payload, int slot)
+        {
+            var bytes = Hmac(Keys[Math.Clamp(slot, 0, Keys.Length - 1)], payload);
+            uint seed = Fnv1a(payload);
+            // نفس ترتيب JS: FNV على 16 بايت الأولى ثم الحساب
+            var first16 = new byte[16];
+            Array.Copy(bytes, first16, 16);
+            uint sigNum = Fnv1a(Encoding.Latin1.GetString(first16), seed);
+            return Base32Encode(sigNum, 10);
+        }
+
+        // ---------------------------------------------------------------
+        // بصمة الجهاز
         // ---------------------------------------------------------------
         public static string MachineFingerprint()
         {
-            var raw = $"{Environment.MachineName}|{Environment.OSVersion}|{Environment.ProcessorCount}";
+            var raw = $"{Environment.MachineName}|{Environment.OSVersion}|{Environment.ProcessorCount}|{Environment.UserName}";
             using var sha = SHA256.Create();
-            var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
-            var sb = new StringBuilder();
-            foreach (var b in bytes) sb.Append(b.ToString("X2"));
-            return sb.ToString().Substring(0, 16);
+            var h = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
+            return Convert.ToHexString(h).Substring(0, 14);
+        }
+
+        public static string MachineCode8()
+        {
+            return Base32Encode(Fnv1a("mc8|" + MachineFingerprint()), 8);
         }
 
         // ---------------------------------------------------------------
@@ -1927,102 +1989,95 @@ namespace SmartPrint.Services
             Directory.CreateDirectory(DataDir);
 
             if (!File.Exists(TrialFile))
-            {
-                File.WriteAllText(TrialFile, Encrypt(DateTime.UtcNow.ToString("O")));
-            }
+                File.WriteAllText(TrialFile, Protect(DateTime.UtcNow.ToString("O")));
 
-            var firstRun = DateTime.Parse(Decrypt(File.ReadAllText(TrialFile)));
+            var firstRun = DateTime.Parse(Unprotect(File.ReadAllText(TrialFile)));
             DaysLeft = Math.Max(0, TrialDays - (int)(DateTime.UtcNow - firstRun).TotalDays);
 
             if (File.Exists(LicenseFile))
             {
-                var stored = JsonSerializer.Deserialize<StoredLicense>(Decrypt(File.ReadAllText(LicenseFile)));
-                if (stored != null && stored.Serial.StartsWith("SPRD-"))
+                var stored = Unprotect(File.ReadAllText(LicenseFile));
+                if (stored.StartsWith("SPRD-"))
                 {
                     IsActivated = true;
-                    Serial = stored.Serial;
+                    Serial = stored;
                 }
             }
         }
 
         // ---------------------------------------------------------------
-        // التحقق من السيريال (التوقيع + الجهاز + خادم التفعيل)
+        // التحقق من السيريال — أوفلاين بالكامل
         // ---------------------------------------------------------------
+        public (bool ok, string message) Validate(string serial, string machineCode8 = null)
+        {
+            serial = (serial ?? string.Empty).Trim().ToUpperInvariant().Replace(" ", "");
+            var m = Regex.Match(serial, @"^SPRD-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})$");
+            if (!m.Success)
+                return (false, "صيغة السيريال غير صحيحة (7 مجموعات)");
+
+            var groups = string.Concat(Enumerable.Range(1, 7).Select(i => m.Groups[i].Value));
+            var slotStr   = groups.Substring(0, 3);
+            var codeField = groups.Substring(3, 8);
+            var expStr    = groups.Substring(11, 4);
+            var issueStr  = groups.Substring(15, 3);
+            var sigStr    = groups.Substring(18, 10);
+
+            int slot = (int)(((Base32Decode(slotStr) - SlotXor) % 32 + 32) % 32);
+            uint expDays = Base32Decode(expStr);
+            uint issueDays = Base32Decode(issueStr);
+
+            // هل يخص هذا الجهاز؟
+            bool universal = codeField == "AAAAAAAA";
+            string mine = machineCode8 ?? MachineCode8();
+            if (!universal && !mine.StartsWith(codeField))
+                return (false, "هذا السيريال صادر لجهاز آخر");
+
+            // التوقيع
+            bool sigOk = false;
+            foreach (int len in new[] { 8, 4, 0 })
+            {
+                var candidate = codeField.Substring(0, len).PadRight(8, 'A');
+                var payload = $"{candidate}|{expDays}|{issueDays}";
+                if (SigOf(payload, slot) == sigStr) { sigOk = true; break; }
+            }
+            if (!sigOk) return (false, "السيريال غير صحيح أو معدَّل");
+
+            // الانتهاء
+            if (expDays > 0)
+            {
+                var expiry = Epoch.AddDays(expDays);
+                if (expiry < DateTime.UtcNow) return (false, "انتهت صلاحية السيريال");
+            }
+
+            return (true, "سيريال صالح");
+        }
+
         public (bool ok, string message) Activate(string serial)
         {
-            serial = (serial ?? string.Empty).Trim().ToUpperInvariant();
-            if (!System.Text.RegularExpressions.Regex.IsMatch(serial, @"^SPRD-[A-Z0-9]{4}(-[A-Z0-9]{4}){3}$"))
-                return (false, "صيغة السيريال غير صحيحة");
+            var res = Validate(serial);
+            if (!res.ok) return res;
 
-            // 1) تحقق أن السيريال مُولَّد من المطوّر (التوقيع)
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(SecretKey));
-            var expected = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(Product + "|" + serial)));
-            // في الإنتاج: قارن ذلك بما يرجعه الخادم
-
-            // 2) استهلاك السيريال مرة واحدة عبر الخادم
-            if (!ConsumeOnServer(serial, MachineFingerprint(), out var serverMsg))
-                return (false, serverMsg);
-
-            // 3) حفظ التفعيل محلياً
-            var payload = JsonSerializer.Serialize(new StoredLicense
-            {
-                Serial = serial,
-                MachineCode = MachineFingerprint(),
-                ActivatedAt = DateTime.UtcNow
-            });
-            File.WriteAllText(LicenseFile, Encrypt(payload));
-
+            File.WriteAllText(LicenseFile, Protect(serial.Trim().ToUpperInvariant()));
             IsActivated = true;
-            Serial = serial;
-            return (true, "تم تفعيل النسخة الكاملة مدى الحياة");
-        }
-
-        private bool ConsumeOnServer(string serial, string machine, out string message)
-        {
-            try
-            {
-                using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(12) };
-                var body = JsonSerializer.Serialize(new { serial, machine, product = Product });
-                var res = http.PostAsync(VerifyUrl,
-                    new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json")).Result;
-                message = res.IsSuccessStatusCode
-                    ? "تم التفعيل"
-                    : "هذا السيريال مستخدم من قبل أو غير صالح";
-                return res.IsSuccessStatusCode;
-            }
-            catch
-            {
-                message = "تعذر الاتصال بخادم التفعيل — تحقق من الإنترنت";
-                return false;
-            }
+            Serial = serial.Trim().ToUpperInvariant();
+            return (true, "تم التفعيل مدى الحياة — بدون إنترنت");
         }
 
         // ---------------------------------------------------------------
-        // تشفير بسيط بالـ DPAPI (حماية ملفات الترخيص من التعديل اليدوي)
+        // حماية الملفات بالـ DPAPI
         // ---------------------------------------------------------------
-        private static string Encrypt(string plain)
-        {
-            var bytes = Encoding.UTF8.GetBytes(plain);
-            var protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.LocalMachine);
-            return Convert.ToBase64String(protectedBytes);
-        }
+        private static string Protect(string plain) =>
+            Convert.ToBase64String(ProtectedData.Protect(
+                Encoding.UTF8.GetBytes(plain), null, DataProtectionScope.LocalMachine));
 
-        private static string Decrypt(string cipher)
+        private static string Unprotect(string cipher)
         {
             try
             {
-                var bytes = Convert.FromBase64String(cipher);
-                var plain = ProtectedData.Unprotect(bytes, null, DataProtectionScope.LocalMachine);
-                return Encoding.UTF8.GetString(plain);
+                return Encoding.UTF8.GetString(ProtectedData.Unprotect(
+                    Convert.FromBase64String(cipher), null, DataProtectionScope.LocalMachine));
             }
             catch { return DateTime.UtcNow.ToString("O"); }
-        }
-
-        private sealed class StoredLicense
-        {
-            public string Serial { get; set; } = string.Empty;
-            public string MachineCode { get; set; } = string.Empty;
-            public DateTime ActivatedAt { get; set; }
         }
     }
 }`

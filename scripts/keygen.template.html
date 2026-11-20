@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SMART PRINT — مولّد سيريالات التفعيل</title>
+    <style>
+      :root {
+        --navy: #0b1b33;
+        --navy2: #12325c;
+        --sky: #1d9bf0;
+        --line: #d8e0ec;
+        --ink: #0f172a;
+        --muted: #64748b;
+        --ok: #059669;
+        --bad: #dc2626;
+        --warn: #b45309;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        background: #eef2f7;
+        color: var(--ink);
+        min-height: 100vh;
+        padding: 0 12px 40px;
+      }
+      .hdr {
+        background: linear-gradient(135deg, var(--navy2), var(--navy) 60%, #061024);
+        color: #fff;
+        border-radius: 0 0 18px 18px;
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        box-shadow: 0 10px 28px rgba(9, 20, 40, 0.28);
+        margin: 0 -12px 16px;
+        position: relative;
+        overflow: hidden;
+      }
+      .hdr::after {
+        content: '';
+        position: absolute;
+        left: -60px; top: -80px; width: 240px; height: 240px;
+        background: radial-gradient(circle, rgba(29,155,240,.35), transparent 65%);
+      }
+      .hdr h1 { font-size: 16px; margin: 0; font-weight: 900; letter-spacing: .2px; }
+      .hdr p { margin: 3px 0 0; font-size: 11px; color: #a9c0da; }
+      .badge {
+        font-size: 10px; font-weight: 800; padding: 5px 9px; border-radius: 999px;
+        background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.24);
+        white-space: nowrap; position: relative; z-index: 2;
+      }
+      .wrap { max-width: 900px; margin: 0 auto; }
+      .card {
+        background: #fff; border-radius: 14px; padding: 16px;
+        box-shadow: 0 2px 10px rgba(15,23,42,.07); border: 1px solid #e6ecf5;
+        margin-bottom: 12px;
+      }
+      .card h2 {
+        font-size: 13px; margin: 0 0 12px; display: flex; align-items: center; gap: 7px;
+        color: var(--navy2); font-weight: 900;
+      }
+      .card h2 .dot { width: 8px; height: 8px; border-radius: 3px; background: var(--sky); }
+      label { display: block; font-size: 11.5px; font-weight: 800; color: #334155; margin: 0 0 5px; }
+      .hint { font-size: 10px; color: var(--muted); margin: 4px 0 0; line-height: 1.6; }
+      input[type='text'], input[type='date'], input[type='password'], select {
+        width: 100%; padding: 9px 11px; border: 1.5px solid var(--line); border-radius: 10px;
+        font-size: 13px; font-family: inherit; background: #f8fafc; color: var(--ink);
+        transition: border-color .15s, background .15s;
+      }
+      input:focus, select:focus { outline: none; border-color: var(--sky); background: #fff; box-shadow: 0 0 0 3px rgba(29,155,240,.13); }
+      .mono { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: .1em; }
+      .grid { display: grid; gap: 10px; }
+      .g2 { grid-template-columns: 1fr 1fr; }
+      @media (max-width: 620px) { .g2 { grid-template-columns: 1fr; } }
+      button {
+        font-family: inherit; cursor: pointer; border: none; border-radius: 10px;
+        font-weight: 800; transition: transform .12s, filter .15s, background .15s;
+      }
+      button:active { transform: scale(.985); }
+      .btn {
+        padding: 11px 16px; font-size: 13px; background: linear-gradient(135deg, var(--sky), var(--navy2));
+        color: #fff; box-shadow: 0 4px 14px rgba(18,50,92,.26);
+      }
+      .btn:hover { filter: brightness(1.08); }
+      .btn:disabled { opacity: .45; cursor: not-allowed; }
+      .btn-ghost {
+        padding: 8px 12px; font-size: 11.5px; background: #eef2f7; color: #334155; border: 1px solid var(--line);
+      }
+      .btn-ghost:hover { background: #e2e8f0; }
+      .btn-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+      .serial-box {
+        margin-top: 14px; border-radius: 12px; padding: 14px; text-align: center;
+        background: linear-gradient(135deg, #f0f7ff, #eaf1fb); border: 1.5px dashed #b9cfea;
+      }
+      .serial-val {
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 16px; font-weight: 800; color: var(--navy); letter-spacing: .06em;
+        word-break: break-all; line-height: 1.7; direction: ltr;
+      }
+      .code-big {
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 26px; font-weight: 900; letter-spacing: .22em; color: var(--navy);
+        direction: ltr; user-select: all;
+      }
+      .toast {
+        position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 10px;
+        font-size: 12px; font-weight: 700; opacity: 0; pointer-events: none;
+        transition: all .22s; z-index: 99; box-shadow: 0 8px 24px rgba(0,0,0,.3);
+      }
+      .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      th, td { padding: 7px 6px; text-align: right; border-bottom: 1px solid #eef2f7; }
+      th { background: #f8fafc; font-size: 10px; color: #475569; font-weight: 900; }
+      td.serial { font-family: ui-monospace, Consolas, monospace; font-size: 9.5px; direction: ltr; text-align: left; }
+      .pill { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 9px; font-weight: 900; }
+      .pill.ok { background: #d1fae5; color: #047857; }
+      .pill.bad { background: #fee2e2; color: #b91c1c; }
+      .msg { font-size: 11.5px; font-weight: 700; padding: 9px 11px; border-radius: 9px; margin-top: 10px; }
+      .msg.err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+      .msg.ok { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+      .lock-screen {
+        position: fixed; inset: 0; background: linear-gradient(160deg, #0b1b33, #061024);
+        display: flex; align-items: center; justify-content: center; padding: 18px; z-index: 50;
+      }
+      .lock-card { background: #fff; border-radius: 16px; padding: 22px; width: 100%; max-width: 340px; text-align: center; }
+      .lock-card .code-big { font-size: 22px; letter-spacing: .3em; margin: 8px 0 12px; }
+      .warn-note {
+        background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+        font-size: 10.5px; font-weight: 700; padding: 9px 11px; border-radius: 9px; line-height: 1.65;
+      }
+      .kbd {
+        display: inline-block; background: #0f172a; color: #fff; font-size: 9.5px; font-weight: 800;
+        padding: 2px 6px; border-radius: 5px; font-family: ui-monospace, monospace;
+      }
+      .foot { text-align: center; font-size: 10.5px; color: var(--muted); margin-top: 18px; line-height: 1.9; }
+      .foot b { color: var(--navy2); }
+      @media print { .no-print { display: none !important; } body { background: #fff; } }
+    </style>
+  </head>
+  <body>
+    <!-- ============ شاشة الدخول ============ -->
+    <div class="lock-screen" id="lockScreen">
+      <div class="lock-card">
+        <div style="font-size: 30px">🔐</div>
+        <h2 style="font-size: 14px; margin: 8px 0 2px; color: var(--navy)">مولّد سيريالات SMART PRINT</h2>
+        <p class="hint">صفحة خاصة بالمطوّر — أدخل رمز الدخول</p>
+        <div class="code-big" id="pinDisplay">····</div>
+        <div class="grid" id="pinPad" style="grid-template-columns: repeat(3, 1fr); gap: 7px"></div>
+        <p class="hint" id="pinMsg" style="color: var(--bad); min-height: 15px"></p>
+      </div>
+    </div>
+
+    <!-- ============ التطبيق ============ -->
+    <div id="app" style="display: none">
+      <div class="hdr">
+        <div style="position: relative; z-index: 2">
+          <h1>SMART PRINT — مولّد سيريالات التفعيل</h1>
+          <p>يعمل بدون إنترنت · ملف واحد · سيريال مخصص لكل جهاز</p>
+        </div>
+        <div class="badge">م/ وائل الجمال</div>
+      </div>
+
+      <div class="wrap">
+        <!-- الخطوة 1: كود الجهاز -->
+        <div class="card">
+          <h2><span class="dot"></span>1 · كود جهاز العميل</h2>
+          <label for="machineInput">كود الجهاز (8 خانات) — من نافذة التفعيل في البرنامج</label>
+          <input
+            id="machineInput"
+            type="text"
+            class="mono"
+            dir="ltr"
+            maxlength="24"
+            placeholder="مثال: U7H2KQ9M"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <p class="hint">
+            في البرنامج: زر «تفعيل» ← يظهر كود من 8 خانات. العميل يرسله لك على واتساب.
+            اتركه فارغاً لإصدار <b>سيريال عام</b> يفتح أي جهاز.
+          </p>
+          <div class="row" style="margin-top: 10px">
+            <button class="btn-ghost" id="btnMyCode">استخدم كود هذا الجهاز (للتجربة)</button>
+            <button class="btn-ghost btn-danger" id="btnClearCode">مسح</button>
+            <span id="codeStatus" class="hint"></span>
+          </div>
+        </div>
+
+        <!-- الخطوة 2: بيانات الترخيص -->
+        <div class="card">
+          <h2><span class="dot"></span>2 · بيانات الترخيص</h2>
+          <div class="grid g2">
+            <div>
+              <label for="customer">اسم العميل (اختياري)</label>
+              <input id="customer" type="text" placeholder="مثال: مكتبة النور — شبين الكوم" />
+            </div>
+            <div>
+              <label for="expires">تاريخ الانتهاء</label>
+              <select id="expiryPreset">
+                <option value="life">مدى الحياة (الأكثر شيوعاً)</option>
+                <option value="1y">سنة واحدة</option>
+                <option value="6m">6 أشهر</option>
+                <option value="3m">3 أشهر</option>
+                <option value="custom">تاريخ مخصص…</option>
+              </select>
+              <input id="expires" type="date" style="margin-top: 7px; display: none" />
+            </div>
+          </div>
+          <div class="row" style="margin-top: 12px">
+            <button class="btn" id="btnGenerate">🔑 توليد السيريال</button>
+            <button class="btn-ghost" id="btnVerify">✔ فحص سيريال موجود</button>
+          </div>
+          <div id="genMsg"></div>
+
+          <!-- النتيجة -->
+          <div class="serial-box" id="resultBox" style="display: none">
+            <div class="hint" style="margin: 0 0 4px">سيريال التفعيل</div>
+            <div class="serial-val" id="serialVal"></div>
+            <div class="hint" id="serialMeta" style="margin-top: 8px"></div>
+            <div class="row no-print" style="justify-content: center; margin-top: 12px">
+              <button class="btn-ghost" id="btnCopy">📋 نسخ السيريال</button>
+              <button class="btn-ghost" id="btnWa">💬 إرسال واتساب</button>
+              <button class="btn-ghost" id="btnPrint">🖨 طباعة</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- السجل -->
+        <div class="card">
+          <h2><span class="dot"></span>3 · سجل السيريالات الصادرة</h2>
+          <div class="row no-print" style="margin-bottom: 10px">
+            <input id="search" type="text" placeholder="بحث بكود الجهاز أو اسم العميل…" style="flex: 1; min-width: 160px" />
+            <button class="btn-ghost" id="btnExport">⤓ تصدير CSV</button>
+            <button class="btn-ghost btn-danger" id="btnClearAll">حذف السجل</button>
+          </div>
+          <div style="overflow-x: auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>تاريخ</th>
+                  <th>العميل</th>
+                  <th>كود الجهاز</th>
+                  <th>السيريال</th>
+                  <th>الصلاحية</th>
+                  <th class="no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="registryBody"></tbody>
+            </table>
+          </div>
+          <p class="hint" style="margin-top: 9px">
+            السجل يُحفظ في هذا المتصفح فقط (localStorage). لا يمنع إعادة الاستخدام بذاته —
+            الحماية الأساسية هي التوقيع الرقمي وربط السيريال بكود الجهاز.
+          </p>
+        </div>
+
+        <div class="warn-note">
+          ⚠️ <b>ملاحظة أمنية:</b> هذا الملف يحتوي مفاتيح التوقيع، فلا تنشره على الإنترنت ولا ترفعه على GitHub.
+          احفظه على جهازك أو فلاشة. لو تسرّب، غيّر <code>LICENSE_KEYS</code> في البرنامج وأضف مفتاحاً جديداً.
+        </div>
+
+        <div class="foot">
+          <b>SMART PRINT</b> · للطباعة المتقدمة<br />
+          تصميم وتنفيذ <b>م/ وائل الجمال</b> — 01222355769
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      /* ==================================================================
+         مولّد السيريالات — مطابق تماماً لملف src/utils/license.ts في البرنامج
+         كل الحساب محلي داخل المتصفح، بدون أي اتصال بالشبكة.
+         ================================================================== */
+
+      // ⬇⬇⬇ نفس المفاتيح الموجودة داخل البرنامج — يجب أن تبقى متطابقة ⬇⬇⬇
+      const LICENSE_KEYS = ['__INJECTED_BY_BUILD__'];
+      const SLOT_XOR = 0x5a;
+      const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const EPOCH_MS = Date.UTC(2025, 0, 1);
+      const DAY_MS = 86400000;
+      const DEFAULT_SLOT = 0;
+      const PIN_CODE = '__INJECTED_PIN__'; // يُحقن وقت البناء
+
+      /* ------------------------------ أدوات ------------------------------ */
+      function fnv1a(input, seed) {
+        seed = seed === undefined ? 0x811c9dc5 : seed;
+        let h = seed >>> 0;
+        for (let i = 0; i < input.length; i++) {
+          h ^= input.charCodeAt(i);
+          h = Math.imul(h, 0x01000193) >>> 0;
+        }
+        return h >>> 0;
+      }
+
+      function base32Encode(num, len) {
+        let n = num >>> 0;
+        let out = '';
+        for (let i = 0; i < len; i++) {
+          out += ALPHABET[n % ALPHABET.length];
+          n = Math.floor(n / ALPHABET.length);
+        }
+        return out;
+      }
+
+      function base32Decode(str) {
+        let n = 0, mul = 1;
+        for (const ch of str) {
+          const idx = ALPHABET.indexOf(ch);
+          if (idx < 0) return NaN;
+          n += idx * mul;
+          mul *= ALPHABET.length;
+        }
+        return n >>> 0;
+      }
+
+      async function hmacSha256(key, message) {
+        const enc = new TextEncoder();
+        const cryptoKey = await crypto.subtle.importKey(
+          'raw', enc.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        );
+        return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(message)));
+      }
+
+      function daysSinceEpoch(ms) { return Math.max(0, Math.floor((ms - EPOCH_MS) / DAY_MS)); }
+      function epochPlusDays(d) { return EPOCH_MS + d * DAY_MS; }
+
+      function formatDate(ms) {
+        if (!ms) return 'مدى الحياة';
+        const d = new Date(ms);
+        return d.toLocaleDateString('ar-EG') ;
+      }
+
+      /* ------------------- نفس دالة تطبيع كود الجهاز ------------------- */
+      function normalizeMachineInput(input) {
+        const cleaned = (input || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (cleaned.length < 4 || /^[0-9]/.test(cleaned)) return null;
+        return cleaned.slice(0, 8).padEnd(8, 'A');
+      }
+
+      /* -------- بصمة This الجهاز (لزر التجربة فقط — ليست ضرورية) -------- */
+      function myFingerprint() {
+        const parts = [
+          navigator.userAgent || 'ua',
+          navigator.language || 'ar',
+          screen ? screen.width + 'x' + screen.height + 'x' + screen.colorDepth : '0x0x0',
+          (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (e) { return 'UTC'; } })(),
+          String(navigator.hardwareConcurrency || 0),
+          String(navigator.deviceMemory || 0),
+        ];
+        const h1 = fnv1a(parts.join('|'));
+        const h2 = fnv1a(parts.join('|'), h1);
+        return h1.toString(36).toUpperCase().padStart(7, '0') + '-' + h2.toString(36).toUpperCase().padStart(7, '0');
+      }
+      function machineCode8(fp) { return base32Encode(fnv1a('mc8|' + fp), 8); }
+
+      /* --------------------------- التوليد --------------------------- */
+      function assembleSerial(slotStr, code, exp, issue, sig) {
+        const core = slotStr + code + exp + issue + sig;
+        const groups = [];
+        for (let i = 0; i < 28; i += 4) groups.push(core.slice(i, i + 4));
+        return 'SPRD-' + groups.join('-');
+      }
+
+      async function generateSerial(opts) {
+        opts = opts || {};
+        const slot = Math.max(0, Math.min(30, opts.slot === undefined ? DEFAULT_SLOT : opts.slot));
+        const machineCode = normalizeMachineInput(opts.machineCode || '') || 'AAAAAAAA';
+        const createdAt = opts.createdAt || Date.now();
+        const expiresAt = opts.expiresAt;
+        const expDays = expiresAt ? daysSinceEpoch(expiresAt) : 0;
+        const issueDays = daysSinceEpoch(createdAt);
+
+        const slotStr = base32Encode(((((slot + SLOT_XOR) % ALPHABET.length) + ALPHABET.length) % ALPHABET.length), 3);
+        const expStr = base32Encode(expDays, 4);
+        const issueStr = base32Encode(issueDays, 3);
+
+        const payload = machineCode + '|' + expDays + '|' + issueDays;
+        const sigBytes = await hmacSha256(LICENSE_KEYS[slot] || LICENSE_KEYS[0], payload);
+        const sigNum = fnv1a(String.fromCharCode.apply(null, Array.from(sigBytes.slice(0, 16))), fnv1a(payload));
+        const sigStr = base32Encode(sigNum, 10).slice(0, 10);
+
+        return {
+          serial: assembleSerial(slotStr, machineCode, expStr, issueStr, sigStr),
+          machineCode: machineCode,
+          customer: opts.customer || '',
+          createdAt: createdAt,
+          expiresAt: expiresAt,
+          slot: slot,
+        };
+      }
+
+      /* --------------------------- التحقق --------------------------- */
+      async function verifySerial(serialInput, fingerprint) {
+        const serial = (serialInput || '').trim().toUpperCase().replace(/\s+/g, '');
+        const re = /^SPRD-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})$/;
+        const m = re.exec(serial);
+        if (!m) return { ok: false, reason: 'صيغة السيريال غير صحيحة (يجب أن يكون 7 مجموعات)' };
+
+        const groups = m.slice(1).join('');
+        const slotStr = groups.slice(0, 3);
+        const codeField = groups.slice(3, 11);
+        const expStr = groups.slice(11, 15);
+        const issueStr = groups.slice(15, 18);
+        const sigStr = groups.slice(18, 28);
+
+        const slot = (((base32Decode(slotStr) - SLOT_XOR) % ALPHABET.length) + ALPHABET.length) % ALPHABET.length;
+        const expDays = base32Decode(expStr);
+        const issueDays = base32Decode(issueStr);
+
+        const key = LICENSE_KEYS[slot] || LICENSE_KEYS[0];
+        let sigOk = false;
+        for (const len of [8, 4, 0]) {
+          const candidate = codeField.slice(0, len).padEnd(8, 'A');
+          const payload = candidate + '|' + expDays + '|' + issueDays;
+          const sigBytes = await hmacSha256(key, payload);
+          const sigNum = fnv1a(String.fromCharCode.apply(null, Array.from(sigBytes.slice(0, 16))), fnv1a(payload));
+          if (base32Encode(sigNum, 10) === sigStr) { sigOk = true; break; }
+        }
+        if (!sigOk) return { ok: false, reason: 'توقيع السيريال غير صحيح — السيريال مُزيَّف أو معدَّل' };
+
+        const expiresAt = expDays > 0 ? epochPlusDays(expDays) : undefined;
+        if (expiresAt && expiresAt < Date.now()) return { ok: false, reason: 'السيريال منتهي الصلاحية' };
+
+        if (fingerprint) {
+          const mine = machineCode8(fingerprint);
+          const universal = codeField === 'AAAAAAAA';
+          if (!universal && !mine.startsWith(codeField)) {
+            return { ok: false, reason: 'السيريال يخص جهازاً آخر (' + codeField + ')' };
+          }
+        }
+        return { ok: true, machineCode: codeField, expiresAt: expiresAt, universal: codeField === 'AAAAAAAA' };
+      }
+
+      /* ============================ الواجهة ============================ */
+      const $ = (id) => document.getElementById(id);
+      const REG_KEY = 'smartprint.devtool.registry.v1';
+
+      function toast(msg) {
+        const t = $('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(t._h);
+        t._h = setTimeout(() => t.classList.remove('show'), 2200);
+      }
+
+      /* ---------- شاشة الدخول ---------- */
+      let pinTyped = '';
+      function buildPinPad() {
+        const pad = $('pinPad');
+        pad.innerHTML = '';
+        ['1','2','3','4','5','6','7','8','9','C','0','✔'].forEach((k) => {
+          const b = document.createElement('button');
+          b.textContent = k;
+          b.className = 'btn-ghost';
+          b.style.fontSize = '15px';
+          b.style.padding = '12px 0';
+          b.onclick = () => {
+            if (k === 'C') { pinTyped = ''; }
+            else if (k === '✔') { checkPin(); return; }
+            else if (pinTyped.length < PIN_CODE.length) { pinTyped += k; }
+            $('pinDisplay').textContent = pinTyped || '····';
+            if (pinTyped.length === PIN_CODE.length) checkPin();
+          };
+          pad.appendChild(b);
+        });
+      }
+      function checkPin() {
+        if (pinTyped === PIN_CODE) {
+          try { sessionStorage.setItem('smartprint.devtool.unlocked', '1'); } catch (e) {}
+          $('lockScreen').style.display = 'none';
+          $('app').style.display = 'block';
+          renderRegistry();
+        } else {
+          $('pinMsg').textContent = 'رمز غير صحيح';
+          pinTyped = '';
+          $('pinDisplay').textContent = '····';
+        }
+      }
+
+      /* ---------- السجل ---------- */
+      function loadRegistry() {
+        try { return JSON.parse(localStorage.getItem(REG_KEY) || '[]'); } catch (e) { return []; }
+      }
+      function saveRegistry(list) {
+        try { localStorage.setItem(REG_KEY, JSON.stringify(list)); } catch (e) {}
+      }
+
+      function renderRegistry() {
+        const q = ($('search').value || '').trim().toLowerCase();
+        const list = loadRegistry().filter((r) =>
+          !q || (r.customer || '').toLowerCase().includes(q) || (r.machineCode || '').toLowerCase().includes(q) || (r.serial || '').toLowerCase().includes(q)
+        );
+        const body = $('registryBody');
+        body.innerHTML = '';
+        if (!list.length) {
+          body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:16px;font-size:11px">لا توجد سيريالات بعد</td></tr>';
+          return;
+        }
+        list.forEach((r) => {
+          const tr = document.createElement('tr');
+          const expired = r.expiresAt && r.expiresAt < Date.now();
+          tr.innerHTML =
+            '<td>' + new Date(r.createdAt).toLocaleDateString('ar-EG') + '</td>' +
+            '<td>' + (r.customer || '—') + '</td>' +
+            '<td class="mono" style="direction:ltr;text-align:left">' + (r.machineCode || 'عام') + '</td>' +
+            '<td class="serial">' + r.serial + '</td>' +
+            '<td><span class="pill ' + (expired ? 'bad' : 'ok') + '">' + (expired ? 'منتهي' : formatDate(r.expiresAt)) + '</span></td>' +
+            '<td class="no-print"><button class="btn-ghost" style="padding:3px 7px;font-size:9.5px" data-copy="' + r.serial + '">نسخ</button> ' +
+            '<button class="btn-ghost btn-danger" style="padding:3px 7px;font-size:9.5px" data-del="' + r.createdAt + '">حذف</button></td>';
+          body.appendChild(tr);
+        });
+        body.querySelectorAll('[data-copy]').forEach((b) => {
+          b.onclick = () => copyText(b.getAttribute('data-copy'));
+        });
+        body.querySelectorAll('[data-del]').forEach((b) => {
+          b.onclick = () => {
+            const id = Number(b.getAttribute('data-del'));
+            saveRegistry(loadRegistry().filter((x) => x.createdAt !== id));
+            renderRegistry();
+            toast('تم الحذف');
+          };
+        });
+      }
+
+      /* ---------- النسخ ---------- */
+      function copyText(text) {
+        const done = () => toast('تم النسخ ✔');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+        } else fallbackCopy(text, done);
+      }
+      function fallbackCopy(text, done) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) { toast('تعذر النسخ — حدّد السيريال يدوياً'); }
+        ta.remove();
+      }
+
+      /* ---------- الحالة ---------- */
+      let lastLicense = null;
+
+      function expiryValue() {
+        const preset = $('expiryPreset').value;
+        if (preset === 'life') return undefined;
+        if (preset === 'custom') {
+          const v = $('expires').value;
+          return v ? new Date(v + 'T23:59:59').getTime() : undefined;
+        }
+        const days = preset === '1y' ? 365 : preset === '6m' ? 180 : 90;
+        return Date.now() + days * DAY_MS;
+      }
+
+      function showMsg(text, ok) {
+        $('genMsg').innerHTML = '<div class="msg ' + (ok ? 'ok' : 'err') + '">' + text + '</div>';
+      }
+
+      /* ---------- الأحداث ---------- */
+      buildPinPad();
+      try {
+        if (sessionStorage.getItem('smartprint.devtool.unlocked') === '1') {
+          $('lockScreen').style.display = 'none';
+          $('app').style.display = 'block';
+          renderRegistry();
+        }
+      } catch (e) {}
+
+      $('expiryPreset').onchange = () => {
+        $('expires').style.display = $('expiryPreset').value === 'custom' ? 'block' : 'none';
+      };
+
+      $('btnMyCode').onclick = () => {
+        $('machineInput').value = machineCode8(myFingerprint());
+        updateCodeStatus();
+        toast('تم إدخال كود هذا الجهاز');
+      };
+      $('btnClearCode').onclick = () => {
+        $('machineInput').value = '';
+        updateCodeStatus();
+      };
+
+      function updateCodeStatus() {
+        const raw = $('machineInput').value.trim();
+        const norm = normalizeMachineInput(raw);
+        const el = $('codeStatus');
+        if (!raw) { el.textContent = '→ سيُصدر سيريال عام (أي جهاز)'; el.style.color = '#b45309'; return; }
+        if (!norm) { el.textContent = '✖ كود غير صالح (4–8 خانات تبدأ بحرف)'; el.style.color = '#dc2626'; return; }
+        el.textContent = '✔ سيُربط بالكود: ' + norm;
+        el.style.color = '#059669';
+      }
+      $('machineInput').oninput = updateCodeStatus;
+
+      $('btnGenerate').onclick = async () => {
+        const raw = $('machineInput').value.trim();
+        if (raw && !normalizeMachineInput(raw)) {
+          showMsg('كود الجهاز غير صالح — يجب أن يكون 4 إلى 8 خانات تبدأ بحرف.', false);
+          return;
+        }
+        $('btnGenerate').disabled = true;
+        try {
+          const lic = await generateSerial({
+            machineCode: raw,
+            customer: $('customer').value.trim(),
+            expiresAt: expiryValue(),
+          });
+          lastLicense = lic;
+
+          // تحقق ذاتي فوري — يضمن أن البرنامج سيقبله
+          const selfCheck = await verifySerial(lic.serial);
+          if (!selfCheck.ok) {
+            showMsg('خطأ داخلي: السيريال لم يجتز الفحص الذاتي — ' + selfCheck.reason, false);
+            return;
+          }
+
+          $('serialVal').textContent = lic.serial;
+          const isUniversal = lic.machineCode === 'AAAAAAAA';
+          $('serialMeta').innerHTML =
+            (isUniversal ? 'سيريال <b>عام</b> — يفتح أي جهاز' : 'مرتبط بكود الجهاز <b>' + lic.machineCode + '</b>') +
+            ' · ' + (lic.expiresAt ? 'ينتهي ' + formatDate(lic.expiresAt) : '<b>مدى الحياة</b>') +
+            (lic.customer ? ' · ' + lic.customer : '');
+          $('resultBox').style.display = 'block';
+          showMsg('تم التوليد والتحقق بنجاح ✔ — أرسل السيريال للعميل', true);
+
+          const list = loadRegistry();
+          list.unshift({
+            serial: lic.serial,
+            machineCode: lic.machineCode,
+            customer: lic.customer,
+            createdAt: lic.createdAt,
+            expiresAt: lic.expiresAt,
+          });
+          saveRegistry(list);
+          renderRegistry();
+        } catch (err) {
+          showMsg('تعذر التوليد: ' + err.message, false);
+        } finally {
+          $('btnGenerate').disabled = false;
+        }
+      };
+
+      $('btnVerify').onclick = async () => {
+        const input = prompt('الصق السيريال للفحص:');
+        if (!input) return;
+        const res = await verifySerial(input);
+        if (res.ok) {
+          showMsg(
+            '✔ السيريال صحيح — ' +
+              (res.universal ? 'عام (أي جهاز)' : 'كود الجهاز ' + res.machineCode) +
+              ' · ' +
+              (res.expiresAt ? 'ينتهي ' + formatDate(res.expiresAt) : 'مدى الحياة'),
+            true
+          );
+        } else {
+          showMsg('✖ ' + res.reason, false);
+        }
+      };
+
+      $('btnCopy').onclick = () => lastLicense && copyText(lastLicense.serial);
+
+      $('btnWa').onclick = () => {
+        if (!lastLicense) return;
+        const isUniversal = lastLicense.machineCode === 'AAAAAAAA';
+        const body =
+          'السلام عليكم،\nتفعيل برنامج SMART PRINT\n' +
+          'كود الجهاز: ' + (isUniversal ? 'عام' : lastLicense.machineCode) + '\n' +
+          'السيريال:\n' + lastLicense.serial + '\n' +
+          (lastLicense.expiresAt ? 'الصلاحية: ' + formatDate(lastLicense.expiresAt) : 'الصلاحية: مدى الحياة') +
+          '\n\nطريقة التفعيل: افتح البرنامج ← زر «تفعيل» ← الصق السيريال ← تفعيل.';
+        window.open('https://wa.me/201222355769?text=' + encodeURIComponent(body), '_blank');
+      };
+
+      $('btnPrint').onclick = () => window.print();
+
+      $('btnExport').onclick = () => {
+        const list = loadRegistry();
+        if (!list.length) { toast('السجل فارغ'); return; }
+        const head = 'createdAt,customer,machineCode,serial,expiresAt\n';
+        const rows = list.map((r) =>
+          [new Date(r.createdAt).toISOString(), '"' + (r.customer || '') + '"', r.machineCode, r.serial, r.expiresAt ? new Date(r.expiresAt).toISOString() : 'LIFE'].join(',')
+        );
+        const blob = new Blob(['\ufeff' + head + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'smartprint-serials-' + Date.now() + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1500);
+      };
+
+      $('btnClearAll').onclick = () => {
+        if (!confirm('حذف السجل بالكامل؟ لا يمكن التراجع.')) return;
+        saveRegistry([]);
+        renderRegistry();
+        toast('تم حذف السجل');
+      };
+
+      $('search').oninput = renderRegistry;
+
+      updateCodeStatus();
+    </script>
+  </body>
+</html>
