@@ -72,11 +72,14 @@ jobs:
 
   # ─────────────────────────────────────────────
   # 2) نشر نسخة الويب على GitHub Pages (اختياري)
+  #    مطلوب تفعيله مرة واحدة: Settings → Pages → Source: GitHub Actions
+  #    ملاحظة: لا نستخدم needs: release حتى لا يُعلَّم الإصدار بالفشل
+  #    إذا لم تكن Pages مفعّلة.
   # ─────────────────────────────────────────────
   pages:
-    name: Deploy to GitHub Pages
+    name: Deploy to GitHub Pages (optional)
     runs-on: ubuntu-latest
-    needs: release
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
