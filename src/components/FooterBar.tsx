@@ -1,5 +1,5 @@
 import React from 'react';
-import { Code2, Check, Layers, Gauge, ScanLine, FileStack, Cpu } from 'lucide-react';
+import { Code2, Check, Layers, Gauge, ScanLine, FileStack, Cpu, Stamp } from 'lucide-react';
 import { PrinterInfo, PaperTray } from '../types';
 
 interface FooterBarProps {
@@ -8,6 +8,7 @@ interface FooterBarProps {
   totalJobs: number;
   totalPages: number;
   onOpenCodeExplorer: () => void;
+  watermarkLabel?: string;
 }
 
 /**
@@ -19,6 +20,7 @@ export const FooterBar: React.FC<FooterBarProps> = ({
   totalJobs,
   totalPages,
   onOpenCodeExplorer,
+  watermarkLabel,
 }) => {
   return (
     <footer className="sect-hdr border-t border-black/40 select-none">
@@ -48,6 +50,13 @@ export const FooterBar: React.FC<FooterBarProps> = ({
             <ScanLine className="w-3.5 h-3.5 text-emerald-300" />
             <span>WIA 2.0 جاهز</span>
           </div>
+
+          {watermarkLabel && (
+            <div className="hidden lg:flex items-center gap-1.5">
+              <Stamp className="w-3.5 h-3.5 text-[var(--t-accent)]" />
+              <span className="truncate max-w-[150px]">علامة: {watermarkLabel}</span>
+            </div>
+          )}
 
           <div className="hidden xl:flex items-center gap-1.5">
             <FileStack className="w-3.5 h-3.5 text-sky-300" />

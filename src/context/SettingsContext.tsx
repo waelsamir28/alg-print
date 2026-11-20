@@ -73,6 +73,17 @@ interface SettingsState {
   installed: boolean;
 }
 
+export interface ThemeProfileFile {
+  app: 'SMART PRINT';
+  kind: 'theme-profile';
+  version: 1;
+  exportedAt: string;
+  name: string;
+  font: AppFont;
+  theme: AppTheme;
+  uiScale: number;
+}
+
 interface SettingsContextValue extends SettingsState {
   fontFamily: string;
   setFont: (font: AppFont) => void;
@@ -83,6 +94,8 @@ interface SettingsContextValue extends SettingsState {
   resetZoom: () => void;
   setInstalled: (installed: boolean) => void;
   resetAppearance: () => void;
+  exportThemeProfile: (name: string) => string;
+  importThemeProfile: (json: string) => { ok: boolean; message: string };
 }
 
 const STORAGE_KEY = 'smartprint.settings.v1';
@@ -163,6 +176,54 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [update]
   );
 
+  /** تصدير الثيم الحالي كملف JSON قابل للمشاركة بين الأجهزة */
+  const exportThemeProfile = useCallback(
+    (name: string) => {
+      const profile: ThemeProfileFile = {
+        app: 'SMART PRINT',
+        kind: 'theme-profile',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        name: name || `${THEME_OPTIONS.find((t) => t.id === settings.theme)?.label ?? 'theme'}`,
+        font: settings.font,
+        theme: settings.theme,
+        uiScale: settings.uiScale,
+      };
+      return JSON.stringify(profile, null, 2);
+    },
+    [settings]
+  );
+
+  /** استيراد ملف ثيم والتحقق من صلاحيته */
+  const importThemeProfile = useCallback((json: string) => {
+    try {
+      const data = JSON.parse(json) as Partial<ThemeProfileFile>;
+      const validFonts: AppFont[] = FONT_OPTIONS.map((f) => f.id);
+      const validThemes: AppTheme[] = THEME_OPTIONS.map((t) => t.id);
+      if (!data.font && !data.theme) {
+        return { ok: false, message: 'الملف لا يحتوي على إعدادات مظهر صالحة' };
+      }
+      if (data.font && !validFonts.includes(data.font)) {
+        return { ok: false, message: 'نوع الخط في الملف غير مدعوم' };
+      }
+      if (data.theme && !validThemes.includes(data.theme)) {
+        return { ok: false, message: 'قالب الثيم في الملف غير معروف' };
+      }
+      setSettings((prev) => ({
+        ...prev,
+        font: data.font ?? prev.font,
+        theme: data.theme ?? prev.theme,
+        uiScale:
+          typeof data.uiScale === 'number'
+            ? Math.min(1.3, Math.max(0.8, data.uiScale))
+            : prev.uiScale,
+      }));
+      return { ok: true, message: `تم تطبيق الثيم «${data.name ?? 'مخصص'}» بنجاح` };
+    } catch {
+      return { ok: false, message: 'ملف غير صالح — يجب أن يكون ملف JSON مصدّراً من البرنامج' };
+    }
+  }, []);
+
   const value: SettingsContextValue = {
     ...settings,
     fontFamily,
@@ -174,6 +235,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     resetZoom,
     setInstalled,
     resetAppearance,
+    exportThemeProfile,
+    importThemeProfile,
   };
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

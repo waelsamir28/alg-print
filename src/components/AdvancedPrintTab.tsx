@@ -24,6 +24,8 @@ import {
   Eye
 } from 'lucide-react';
 import { SectionHeader, HeaderBadge } from './SectionHeader';
+import { WatermarkOverlay } from './WatermarkOverlay';
+import { useWorkspace } from '../context/WorkspaceContext';
 import {
   PrintJobItem,
   PrinterInfo,
@@ -106,6 +108,7 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const { watermark, signature } = useWorkspace();
 
   // Preview state
   const [zoomLevel, setZoomLevel] = useState<number>(1);
@@ -712,6 +715,15 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
           </SectionHeader>
 
           <div className="p-4 flex-1 flex flex-col min-h-0">
+          {/* شارة حالة العلامة المائية */}
+          {watermark.enabled && (
+            <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg bg-primary-soft border border-[var(--t-primary-border)] text-[10px] font-bold text-[var(--t-primary-ink)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)] animate-pulse" />
+              العلامة المائية مفعّلة: «{watermark.text}»
+              {signature && <span className="ms-auto opacity-70">+ توقيع محفوظ</span>}
+            </div>
+          )}
+
           {/* Zoom / Rotate / Duplex Flip Toolbar */}
           <div className="flex items-center justify-between bg-slate-100 p-1.5 rounded-xl mb-2.5 text-xs">
             <div className="flex items-center gap-1">
@@ -777,9 +789,12 @@ export const AdvancedPrintTab: React.FC<AdvancedPrintTabProps> = ({
               {/* Paper Sheet representation */}
               <div className="w-[240px] h-[340px] sm:w-[260px] sm:h-[368px] bg-white rounded-sm shadow-2xl p-4 flex flex-col justify-between text-gray-800 relative overflow-hidden border border-gray-200">
                 {/* Visual Watermark of Side */}
-                <div className="absolute top-2 left-2 text-[9px] font-bold text-gray-400 font-mono px-1 bg-gray-100 rounded">
+                <div className="absolute top-2 left-2 text-[9px] font-bold text-gray-400 font-mono px-1 bg-gray-100 rounded z-20">
                   {isBackSide ? 'ظهر الورقة (Back)' : 'وجه الورقة (Front)'}
                 </div>
+
+                {/* العلامة المائية + الترويسة + رقم الصفحة */}
+                <WatermarkOverlay sheetLabel={`صفحة ${currentSheetIndex + 1} / ${totalPhysicalSheets}`} />
 
                 {/* Layout Renderer: 1-up, 2-up, 4-up, or Booklet */}
                 {layout === '1-up' && (
