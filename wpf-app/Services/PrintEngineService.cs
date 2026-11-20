@@ -8,6 +8,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Xps.Packaging;
 using SmartPrint.Models;
+using Brushes = System.Windows.Media.Brushes;
+using Image = System.Windows.Controls.Image;
+using Size = System.Windows.Size;
 
 namespace SmartPrint.Services
 {
@@ -188,18 +191,23 @@ namespace SmartPrint.Services
                 {
                     using var xps = new XpsDocument(job.FilePath, FileAccess.Read);
                     var seq = xps.GetFixedDocumentSequence();
-
-                    if (seq is FixedDocument fixedDoc) return fixedDoc;
+                    if (seq == null) return null;
 
                     // تسلسل XPS → نعيد بناء الصفحات كـ FixedDocument
                     var rebuilt = new FixedDocument();
                     foreach (var docRef in seq.References)
                     {
                         var doc = docRef.GetDocument(false);
-                        foreach (var pageRef in doc.Pages)
+                        if (doc == null) continue;
+                        foreach (var pageContent in doc.Pages)
                         {
-                            var content = pageRef.GetPageContent();
-                            if (content != null) rebuilt.Pages.Add(content);
+                            var fp = pageContent.GetPageRoot(false);
+                            if (fp != null)
+                            {
+                                var pc = new PageContent();
+                                ((IAddChild)pc).AddChild(fp);
+                                rebuilt.Pages.Add(pc);
+                            }
                         }
                     }
                     return rebuilt.Pages.Count > 0 ? rebuilt : null;
