@@ -64,9 +64,10 @@ export const PrintProgressModal: React.FC<PrintProgressModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200 select-none">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden text-right">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden text-right animate-pop-in">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 text-white p-5 flex items-center justify-between">
+        <div className="sect-hdr px-5 py-4 flex items-center justify-between">
+          <span className="absolute inset-0" />
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
               <Printer className="w-6 h-6 text-white animate-bounce" />
@@ -75,7 +76,7 @@ export const PrintProgressModal: React.FC<PrintProgressModalProps> = ({
               <h3 className="text-lg font-black tracking-tight">
                 {isCompleted ? 'اكتملت مهمة الطباعة بنجاح!' : 'جاري إرسال وطباعة المستندات...'}
               </h3>
-              <p className="text-xs text-blue-100 flex items-center gap-1.5 mt-0.5">
+              <p className="text-xs text-white/70 flex items-center gap-1.5 mt-0.5">
                 <Zap className="w-3.5 h-3.5 text-amber-300" />
                 <span>محرك الطباعة فائق السرعة HP PageWide (حتى 75 PPM)</span>
               </p>
@@ -83,7 +84,7 @@ export const PrintProgressModal: React.FC<PrintProgressModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            className="btn-pop relative z-10 w-8 h-8 rounded-lg bg-white/10 ring-1 ring-white/20 hover:bg-red-500 text-white flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>

@@ -79,27 +79,27 @@ export const CodeExplorerModal: React.FC<CodeExplorerModalProps> = ({ isOpen, on
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-6 animate-in fade-in duration-200 select-none">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-6xl w-full h-[90vh] flex flex-col overflow-hidden text-right">
         {/* Header */}
-        <div className="bg-gradient-to-r from-gray-900 via-slate-800 to-indigo-950 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600/40 border border-indigo-400/30 flex items-center justify-center shadow-lg">
-              <Code2 className="w-6 h-6 text-indigo-300" />
+        <div className="sect-hdr px-4 sm:px-5 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="w-10 h-10 rounded-xl bg-white/12 border border-white/25 flex items-center justify-center shadow-lg">
+              <Code2 className="w-6 h-6 text-[var(--t-accent)]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-black tracking-tight font-sans">
                   مستكشف كود C# .NET 8 WPF - SMART PRINT
                 </h2>
-                <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-500/30 border border-indigo-400/40 text-indigo-200 rounded">
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-white/12 border border-white/25 text-white/85 rounded">
                   Windows 11 Native Architecture
                 </span>
               </div>
-              <p className="text-xs text-gray-300">
+              <p className="text-xs text-white/60">
                 مشروع كامل مفصول مع حزم NuGet المجانية بدون أوفيس وملف GitHub Actions لإنتاج ملف exe واحد
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative z-10">
             {/* Download Solution ZIP button */}
             <button
               onClick={handleDownloadZip}
