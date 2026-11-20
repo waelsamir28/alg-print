@@ -45,15 +45,20 @@ jobs:
           retention-days: 30
 
       # صفحة التفعيل للمطوّر تُبنى من الـ Secret وتُرفع كـ Artifact خاص
+      # ملاحظة: لا يمكن استخدام secrets داخل if: — لذلك نتحقق داخل السكربت
       - name: Build developer keygen (private)
-        if: ${{ secrets.LICENSE_KEYS != '' }}
-        run: node scripts/build-keygen.mjs
+        run: |
+          if [ -z "$LICENSE_KEYS" ]; then
+            echo "ℹ️ لم يتم ضبط LICENSE_KEYS — تخطّي بناء المولّد الخاص"
+            exit 0
+          fi
+          node scripts/build-keygen.mjs
         env:
           LICENSE_KEYS: ${{ secrets.LICENSE_KEYS }}
           KEYGEN_PIN: ${{ secrets.KEYGEN_PIN }}
 
       - name: Upload developer keygen (private)
-        if: ${{ secrets.LICENSE_KEYS != '' }}
+        if: hashFiles('dist-private/smartprint-keygen.html') != ''
         uses: actions/upload-artifact@v4
         with:
           name: SMART-PRINT-Developer-Keygen-PRIVATE
