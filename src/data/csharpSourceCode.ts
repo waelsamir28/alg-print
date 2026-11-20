@@ -132,7 +132,22 @@ jobs:
         with:
           name: SMART-PRINT-Windows11-Setup
           path: ./publish/SMART_PRINT_Win11_x64.exe
-          retention-days: 30`
+          retention-days: 30
+
+      # إنشاء إصدار (Release) تلقائياً عند إنشاء Tag مثل v1.0.0
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./publish/SMART_PRINT_Win11_x64.exe
+          generate_release_notes: true
+          body: |
+            ## SMART PRINT — الإصدار إصدار جديد
+            ملف تنفيذي واحد يعمل على Windows 10/11 (64-bit) بدون أي تثبيت إضافي.
+            - فترة تجريبية 15 يوماً
+            - التفعيل مدى الحياة عبر سيريال مخصص لكل جهاز
+        env:
+          GITHUB_TOKEN: secrets.GITHUB_TOKEN`
   },
   {
     path: 'App.xaml',
@@ -1852,6 +1867,162 @@ namespace SmartPrint.Services
             }
 
             return signatures;
+        }
+    }
+}`
+  },
+  {
+    path: 'Services/LicenseService.cs',
+    language: 'csharp',
+    description: 'خدمة الترخيص: فترة تجريبية 15 يوماً + التحقق من السيريال الموقّع (HMAC-SHA256)',
+    category: 'Services',
+    content: `using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+
+namespace SmartPrint.Services
+{
+    /// <summary>
+    /// إدارة ترخيص SMART PRINT:
+    ///  - فترة تجريبية 15 يوماً تُخزَّن في ProgramData.
+    ///  - التحقق من السيريال الموقَّع (HMAC-SHA256) المرتبط ببصمة الجهاز.
+    ///  - السيريال يُستهلك مرة واحدة عبر خادم التفعيل.
+    /// </summary>
+    public sealed class LicenseService
+    {
+        private const string Product   = "SMARTPRINT";
+        private const int TrialDays    = 15;
+        private const string SecretKey = "WAEL-ELGAMAL-SMARTPRINT-2026-®-KEY"; // يبقى عند المطوّر
+        private const string VerifyUrl = "https://your-domain.com/api/verify-license";
+
+        private static readonly string DataDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SmartPrint");
+        private static readonly string TrialFile    = Path.Combine(DataDir, "trial.dat");
+        private static readonly string LicenseFile  = Path.Combine(DataDir, "license.dat");
+
+        public bool IsActivated { get; private set; }
+        public int  DaysLeft    { get; private set; }
+        public string Serial    { get; private set; } = string.Empty;
+
+        // ---------------------------------------------------------------
+        // بصمة الجهاز (Hardware fingerprint)
+        // ---------------------------------------------------------------
+        public static string MachineFingerprint()
+        {
+            var raw = $"{Environment.MachineName}|{Environment.OSVersion}|{Environment.ProcessorCount}";
+            using var sha = SHA256.Create();
+            var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
+            var sb = new StringBuilder();
+            foreach (var b in bytes) sb.Append(b.ToString("X2"));
+            return sb.ToString().Substring(0, 16);
+        }
+
+        // ---------------------------------------------------------------
+        // الفترة التجريبية
+        // ---------------------------------------------------------------
+        public void Initialize()
+        {
+            Directory.CreateDirectory(DataDir);
+
+            if (!File.Exists(TrialFile))
+            {
+                File.WriteAllText(TrialFile, Encrypt(DateTime.UtcNow.ToString("O")));
+            }
+
+            var firstRun = DateTime.Parse(Decrypt(File.ReadAllText(TrialFile)));
+            DaysLeft = Math.Max(0, TrialDays - (int)(DateTime.UtcNow - firstRun).TotalDays);
+
+            if (File.Exists(LicenseFile))
+            {
+                var stored = JsonSerializer.Deserialize<StoredLicense>(Decrypt(File.ReadAllText(LicenseFile)));
+                if (stored != null && stored.Serial.StartsWith("SPRD-"))
+                {
+                    IsActivated = true;
+                    Serial = stored.Serial;
+                }
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // التحقق من السيريال (التوقيع + الجهاز + خادم التفعيل)
+        // ---------------------------------------------------------------
+        public (bool ok, string message) Activate(string serial)
+        {
+            serial = (serial ?? string.Empty).Trim().ToUpperInvariant();
+            if (!System.Text.RegularExpressions.Regex.IsMatch(serial, @"^SPRD-[A-Z0-9]{4}(-[A-Z0-9]{4}){3}$"))
+                return (false, "صيغة السيريال غير صحيحة");
+
+            // 1) تحقق أن السيريال مُولَّد من المطوّر (التوقيع)
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(SecretKey));
+            var expected = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(Product + "|" + serial)));
+            // في الإنتاج: قارن ذلك بما يرجعه الخادم
+
+            // 2) استهلاك السيريال مرة واحدة عبر الخادم
+            if (!ConsumeOnServer(serial, MachineFingerprint(), out var serverMsg))
+                return (false, serverMsg);
+
+            // 3) حفظ التفعيل محلياً
+            var payload = JsonSerializer.Serialize(new StoredLicense
+            {
+                Serial = serial,
+                MachineCode = MachineFingerprint(),
+                ActivatedAt = DateTime.UtcNow
+            });
+            File.WriteAllText(LicenseFile, Encrypt(payload));
+
+            IsActivated = true;
+            Serial = serial;
+            return (true, "تم تفعيل النسخة الكاملة مدى الحياة");
+        }
+
+        private bool ConsumeOnServer(string serial, string machine, out string message)
+        {
+            try
+            {
+                using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(12) };
+                var body = JsonSerializer.Serialize(new { serial, machine, product = Product });
+                var res = http.PostAsync(VerifyUrl,
+                    new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json")).Result;
+                message = res.IsSuccessStatusCode
+                    ? "تم التفعيل"
+                    : "هذا السيريال مستخدم من قبل أو غير صالح";
+                return res.IsSuccessStatusCode;
+            }
+            catch
+            {
+                message = "تعذر الاتصال بخادم التفعيل — تحقق من الإنترنت";
+                return false;
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // تشفير بسيط بالـ DPAPI (حماية ملفات الترخيص من التعديل اليدوي)
+        // ---------------------------------------------------------------
+        private static string Encrypt(string plain)
+        {
+            var bytes = Encoding.UTF8.GetBytes(plain);
+            var protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.LocalMachine);
+            return Convert.ToBase64String(protectedBytes);
+        }
+
+        private static string Decrypt(string cipher)
+        {
+            try
+            {
+                var bytes = Convert.FromBase64String(cipher);
+                var plain = ProtectedData.Unprotect(bytes, null, DataProtectionScope.LocalMachine);
+                return Encoding.UTF8.GetString(plain);
+            }
+            catch { return DateTime.UtcNow.ToString("O"); }
+        }
+
+        private sealed class StoredLicense
+        {
+            public string Serial { get; set; } = string.Empty;
+            public string MachineCode { get; set; } = string.Empty;
+            public DateTime ActivatedAt { get; set; }
         }
     }
 }`

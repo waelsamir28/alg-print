@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { NavTabs } from './components/NavTabs';
 import { FooterBar } from './components/FooterBar';
@@ -16,6 +16,14 @@ import { useWorkspace } from './context/WorkspaceContext';
 import { InstallerWizard } from './components/InstallerWizard';
 import { SplashWelcome } from './components/SplashWelcome';
 import { useSettings } from './context/SettingsContext';
+import { useLicense } from './context/LicenseContext';
+import { ActivationModal, ActivationSuccessToast } from './components/ActivationModal';
+import { TrialBanner } from './components/TrialBanner';
+import { ActivationSite } from './components/ActivationSite';
+import { ContactPage } from './components/ContactPage';
+import { PdfToolsModal } from './components/PdfToolsModal';
+import { ImageCompressorModal } from './components/ImageCompressorModal';
+import { DocumentDiffModal } from './components/DocumentDiffModal';
 import {
   INSTALLED_PRINTERS,
   INSTALLED_SCANNERS,
@@ -35,6 +43,17 @@ import {
 export function App() {
   const { installed, setInstalled, uiScale, zoomIn, zoomOut, resetZoom } = useSettings();
   const { activeJob, enqueueJob, watermark } = useWorkspace();
+  const { isLocked, status: licenseStatus } = useLicense();
+
+  // صفحة تفعيل المطوّر (مسار منفصل #/activate)
+  const [route, setRoute] = useState<string>(() =>
+    typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
+  );
+  useEffect(() => {
+    const onHash = () => setRoute(window.location.hash.replace('#', ''));
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   // شاشات التثبيت والترحيب
   const [showSplash, setShowSplash] = useState<boolean>(false);
@@ -50,6 +69,13 @@ export function App() {
   const [isStockOpen, setIsStockOpen] = useState<boolean>(false);
   const [isSignatureOpen, setIsSignatureOpen] = useState<boolean>(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
+  const [isActivationOpen, setIsActivationOpen] = useState<boolean>(false);
+  const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
+  const [isPdfToolsOpen, setIsPdfToolsOpen] = useState<boolean>(false);
+  const [isCompressorOpen, setIsCompressorOpen] = useState<boolean>(false);
+  const [isDiffOpen, setIsDiffOpen] = useState<boolean>(false);
+  const [showActivated, setShowActivated] = useState<boolean>(false);
+  const [activationReason, setActivationReason] = useState<'manual' | 'expired'>('manual');
 
   // Batch Print Jobs queue
   const [jobs, setJobs] = useState<PrintJobItem[]>([
@@ -230,40 +256,77 @@ export function App() {
   };
 
   // اختصارات لوحة المفاتيح
-  useKeyboardShortcuts({
-    enabled: installed && !showSplash,
-    onPrint: () => {
-      if (jobs.length > 0) handleEnqueuePrint();
-    },
-    onAddFiles: () => {
-      const input = document.querySelector<HTMLInputElement>('input[type="file"][multiple]');
-      input?.click();
-    },
-    onSettings: () => setIsSettingsOpen(true),
-    onHelp: () => setIsShortcutsOpen(true),
-    onQueue: () => setIsQueueOpen(true),
-    onStock: () => setIsStockOpen(true),
-    onSignature: () => setIsSignatureOpen(true),
-    onZoomIn: zoomIn,
-    onZoomOut: zoomOut,
-    onZoomReset: resetZoom,
-    onTabChange: setActiveTab,
-    onScannerTab: () => setActiveTab('scanner'),
-    onEscape: () => {
-      setIsSettingsOpen(false);
-      setIsQueueOpen(false);
-      setIsStockOpen(false);
-      setIsSignatureOpen(false);
-      setIsShortcutsOpen(false);
-      setIsPrintProgressOpen(false);
-    },
-  });
+  const closeAllOverlays = useCallback(() => {
+    setIsSettingsOpen(false);
+    setIsQueueOpen(false);
+    setIsStockOpen(false);
+    setIsSignatureOpen(false);
+    setIsShortcutsOpen(false);
+    setIsPrintProgressOpen(false);
+    setIsPdfToolsOpen(false);
+    setIsCompressorOpen(false);
+    setIsDiffOpen(false);
+    setIsActivationOpen(false);
+    setIsContactOpen(false);
+    setIsCodeExplorerOpen(false);
+  }, []);
+
+  const openActivation = useCallback((reason: 'manual' | 'expired' = 'manual') => {
+    setActivationReason(reason);
+    setIsActivationOpen(true);
+  }, []);
+
+  // ربط الأحداث في useMemo لمنع إعادة التسجيل في كل render
+  const shortcuts = useMemo(
+    () => ({
+      enabled: installed && !showSplash,
+      onPrint: () => {
+        if (jobs.length > 0) handleEnqueuePrint();
+      },
+      onAddFiles: () => {
+        const input = document.querySelector<HTMLInputElement>('input[type="file"][multiple]');
+        input?.click();
+      },
+      onSettings: () => setIsSettingsOpen(true),
+      onHelp: () => setIsShortcutsOpen(true),
+      onQueue: () => setIsQueueOpen(true),
+      onStock: () => setIsStockOpen(true),
+      onSignature: () => setIsSignatureOpen(true),
+      onPdfTools: () => setIsPdfToolsOpen(true),
+      onImageCompressor: () => setIsCompressorOpen(true),
+      onDiff: () => setIsDiffOpen(true),
+      onActivation: () => openActivation('manual'),
+      onZoomIn: zoomIn,
+      onZoomOut: zoomOut,
+      onZoomReset: resetZoom,
+      onTabChange: (tab: 'print' | 'scanner') => setActiveTab(tab),
+      onScannerTab: () => setActiveTab('scanner'),
+      onEscape: closeAllOverlays,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [installed, showSplash, jobs.length, zoomIn, zoomOut, resetZoom, openActivation, closeAllOverlays]
+  );
+
+  useKeyboardShortcuts(shortcuts);
+
 
   // Calculations for StatusBar & Progress
   const totalPages = jobs.reduce((sum, j) => sum + j.pageCount, 0);
   const pagesPerSheet = layout === '2-up' ? 2 : layout === '4-up' ? 4 : layout === 'booklet' ? 4 : 1;
   const singleSideSheets = Math.max(1, Math.ceil(totalPages / pagesPerSheet));
   const totalPhysicalSheets = duplexMode !== 'simplex' ? Math.max(1, Math.ceil(singleSideSheets / 2)) : singleSideSheets;
+
+  // ───────── صفحة تفعيل المطوّر (منفصلة عن البرنامج) ─────────
+  if (route.startsWith('/activate')) {
+    return (
+      <ActivationSite
+        onExit={() => {
+          window.location.hash = '';
+          setRoute('');
+        }}
+      />
+    );
+  }
 
   // ───────── شاشة التثبيت (عند عدم التثبيت بعد) ─────────
   if (!installed) {
@@ -287,11 +350,53 @@ export function App() {
     return <SplashWelcome onDone={() => setShowSplash(false)} />;
   }
 
+  // ───────── بوابة الترخيص: عند انتهاء التجربة بدون تفعيل ─────────
+  if (isLocked && licenseStatus !== 'activated') {
+    return (
+      <div className="min-h-screen hdr-grad flex flex-col items-center justify-center p-4" dir="rtl">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-pop-in">
+          <div className="sect-hdr p-5 text-center">
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="w-14 h-14 rounded-2xl bg-white/12 ring-1 ring-white/25 flex items-center justify-center mb-2 animate-pop-in">
+                <span className="text-2xl">⏳</span>
+              </div>
+              <h1 className="text-white font-black text-lg">انتهت الفترة التجريبية</h1>
+              <p className="text-[11px] text-white/70 mt-1">
+                انتهت 15 يوماً — فعّل البرنامج للمتابعة مدى الحياة
+              </p>
+            </div>
+          </div>
+          <div className="p-5 text-center">
+            <p className="text-xs text-gray-600 leading-relaxed mb-4">
+              شكراً لتجربتك <strong>SMART PRINT</strong>. للحصول على سيريال التفعيل، تواصل مع
+              المطوّر وأرسل كود جهازك.
+            </p>
+            <button
+              onClick={() => openActivation('expired')}
+              className="btn-pop btn-shine w-full py-3 rounded-xl font-black text-sm text-white btn-primary-grad shadow-lg flex items-center justify-center gap-2"
+            >
+              إدخال سيريال التفعيل
+            </button>
+            <button
+              onClick={() => setIsContactOpen(true)}
+              className="btn-pop w-full mt-2 py-2.5 rounded-xl font-bold text-xs bg-[#25D366] text-white flex items-center justify-center gap-2"
+            >
+              التواصل عبر واتساب — 01222355769
+            </button>
+            <p className="mt-4 text-[10px] font-bold text-gray-500">تحياتي م / وائل الجمال</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       dir="rtl"
       className="min-h-screen bg-slate-100 text-gray-900 flex flex-col selection:bg-[var(--t-primary)] selection:text-white"
     >
+      {/* شريط حالة الترخيص */}
+      <TrialBanner onActivate={() => openActivation('manual')} />
       {/* 1. هيدر البرنامج الغامق (جريدانت أزرق وكحلي) */}
       <TitleBar
         printerStatus={selectedPrinter.status}
@@ -320,6 +425,11 @@ export function App() {
         onOpenStock={() => setIsStockOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onOpenSignature={() => setIsSignatureOpen(true)}
+        onOpenPdfTools={() => setIsPdfToolsOpen(true)}
+        onOpenCompressor={() => setIsCompressorOpen(true)}
+        onOpenDiff={() => setIsDiffOpen(true)}
+        onOpenContact={() => setIsContactOpen(true)}
+        onOpenLicense={() => openActivation('manual')}
       />
 
       {/* 3. Main Content Viewport */}
@@ -428,6 +538,31 @@ export function App() {
 
       {/* 10. لوحة الاختصارات */}
       <ShortcutsPanel isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+
+      {/* 11. أدوات PDF — دمج/تقسيم/ترتيب */}
+      <PdfToolsModal isOpen={isPdfToolsOpen} onClose={() => setIsPdfToolsOpen(false)} />
+
+      {/* 12. ضغط الصور لتوفير الحبر */}
+      <ImageCompressorModal isOpen={isCompressorOpen} onClose={() => setIsCompressorOpen(false)} />
+
+      {/* 13. مقارنة A/B للمستندات */}
+      <DocumentDiffModal isOpen={isDiffOpen} onClose={() => setIsDiffOpen(false)} />
+
+      {/* 14. التفعيل + رسالة النجاح العائمة */}
+      <ActivationModal
+        isOpen={isActivationOpen}
+        onClose={() => setIsActivationOpen(false)}
+        onActivated={() => setShowActivated(true)}
+        reason={activationReason}
+      />
+      <ActivationSuccessToast show={showActivated} onClose={() => setShowActivated(false)} />
+
+      {/* 15. التواصل مع المطوّر */}
+      <ContactPage
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
+        onOpenActivation={() => openActivation('manual')}
+      />
 
 
     </div>
