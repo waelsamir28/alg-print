@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>SmartPrint</AssemblyName>
+    <RootNamespace>SmartPrint</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyTitle>SMART PRINT - للطباعة المتقدمة</AssemblyTitle>
+    <Product>SMART PRINT</Product>
+    <Company>Eng. Wael Elgamal</Company>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <!-- Self-contained = يعمل بدون تثبيت .NET على جهاز العميل -->
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- ملاحظة: PublishSingleFile غير مفعّل لأن PDFium (pdfium.dll) مكتبة أصلية
+         لا تُحمَّل من داخل ملف مضغوط. النشر مجلد + ZIP هو الحل الموثوق. -->
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- تضمين الخطوط العربية الاحتياطية في الملف الناتج -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <SatelliteResourceLanguages>en;ar</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- مجانية 100% — لا تحتاج Microsoft Office ولا أي برنامج خارجي -->
+    <PackageReference Include="DocX" Version="3.0.1" />
+    <PackageReference Include="PdfSharpCore" Version="1.3.65" />
+    <PackageReference Include="Docnet.Core" Version="2.6.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.2" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>
