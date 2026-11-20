@@ -9,6 +9,7 @@ using Microsoft.Win32;
 using SmartPrint.Models;
 using SmartPrint.Services;
 using Application = System.Windows.Application;
+using Clipboard = System.Windows.Clipboard;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
