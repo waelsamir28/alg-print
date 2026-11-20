@@ -1,0 +1,86 @@
+name: 🖨 Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+    paths: ['wpf-app/**', '.github/workflows/wpf-exe.yml']
+  pull_request:
+    paths: ['wpf-app/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build SmartPrint.exe (win-x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('wpf-app/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        working-directory: wpf-app
+        run: dotnet restore SmartPrint.csproj
+
+      - name: Build (check errors)
+        working-directory: wpf-app
+        run: dotnet build SmartPrint.csproj -c Release --no-restore
+
+      # ملاحظة مهمة:
+      # PDFium (docnet.core) يعتمد على مكتبات أصلية (pdfium.dll) لا تُحمَّل من
+      # داخل ملف EXE مضغوط single-file. لذلك نُنشر كتطبيق مستقل (self-contained)
+      # مع كل ملفاته، ثم نضغطه في ملف ZIP واحد. هذا يحفظ دعم PDF الكامل.
+      - name: Publish self-contained app
+        working-directory: wpf-app
+        run: >
+          dotnet publish SmartPrint.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=false
+          -p:PublishTrimmed=false
+          -p:EnableCompressionInSingleFile=false
+          -o ../publish
+
+      - name: Rename + package
+        shell: pwsh
+        run: |
+          $exe = Join-Path ./publish "SmartPrint.exe"
+          if (-not (Test-Path $exe)) { throw "SmartPrint.exe not found" }
+          Copy-Item $exe (Join-Path ./publish "SMART_PRINT_Win11_x64.exe") -Force
+
+          # التأكد من وجود pdfium
+          $pdfium = Get-ChildItem -Path ./publish -Filter "pdfium*.dll" -Recurse
+          if (-not $pdfium) { throw "pdfium.dll missing — PDF support would break" }
+          Write-Host "pdfium found: $($pdfium.FullName)"
+
+          Compress-Archive -Path ./publish/* -DestinationPath ./SMART_PRINT_v1.0.0_win-x64.zip -Force
+          Get-ChildItem ./SMART_PRINT_v1.0.0_win-x64.zip | Format-List Name, Length
+
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMART-PRINT-EXE
+          path: SMART_PRINT_v1.0.0_win-x64.zip
+          retention-days: 90
+
+      - name: Attach to Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: SMART_PRINT_v1.0.0_win-x64.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
