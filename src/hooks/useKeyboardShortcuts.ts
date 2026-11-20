@@ -14,6 +14,10 @@ export interface ShortcutHandlers {
   onQueue?: () => void;
   onStock?: () => void;
   onSignature?: () => void;
+  onPdfTools?: () => void;
+  onImageCompressor?: () => void;
+  onDiff?: () => void;
+  onActivation?: () => void;
   enabled?: boolean;
 }
 
@@ -68,6 +72,26 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
         handlers.onSignature?.();
         return;
       }
+      if (mod && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        handlers.onPdfTools?.();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        handlers.onDiff?.();
+        return;
+      }
+      if (mod && e.shiftKey && e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        handlers.onImageCompressor?.();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        handlers.onActivation?.();
+        return;
+      }
       if (e.key === '+' || e.key === '=') {
         e.preventDefault();
         handlers.onZoomIn?.();
@@ -108,6 +132,10 @@ export const SHORTCUT_LIST: { keys: string; label: string; group: string }[] = [
   { keys: 'Ctrl + Q', label: 'طابور الطباعة', group: 'الطباعة' },
   { keys: 'Ctrl + K', label: 'المخزون والأحبار', group: 'المخزون' },
   { keys: 'Ctrl + E', label: 'التوقيع الإلكتروني', group: 'الاسكانر' },
+  { keys: 'Ctrl + M', label: 'أدوات PDF (دمج / تقسيم / ترتيب)', group: 'المستندات' },
+  { keys: 'Ctrl + D', label: 'مقارنة A/B بين مستندين', group: 'المستندات' },
+  { keys: 'Ctrl + Shift + I', label: 'ضغط الصور لتوفير الحبر', group: 'المستندات' },
+  { keys: 'Ctrl + L', label: 'تفعيل البرنامج / الترخيص', group: 'النظام' },
   { keys: 'Ctrl + ,', label: 'إعدادات البرنامج', group: 'النظام' },
   { keys: '+ / -', label: 'تكبير / تصغير الواجهة', group: 'النظام' },
   { keys: '0', label: 'إعادة الحجم 100%', group: 'النظام' },

@@ -8,8 +8,15 @@ import {
   PenTool,
   Loader2,
   AlertTriangle,
+  Files,
+  ImageDown,
+  GitCompare,
+  Headphones,
+  KeyRound,
+  Crown,
 } from 'lucide-react';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { useLicense } from '../context/LicenseContext';
 
 interface NavTabsProps {
   activeTab: 'print' | 'scanner';
@@ -20,6 +27,11 @@ interface NavTabsProps {
   onOpenStock: () => void;
   onOpenShortcuts: () => void;
   onOpenSignature: () => void;
+  onOpenPdfTools: () => void;
+  onOpenCompressor: () => void;
+  onOpenDiff: () => void;
+  onOpenContact: () => void;
+  onOpenLicense: () => void;
 }
 
 /** الزرّان أسفل الهيدر + شريط أدوات سريع (طابور / مخزون / توقيع / اختصارات) */
@@ -32,8 +44,14 @@ export const NavTabs: React.FC<NavTabsProps> = ({
   onOpenStock,
   onOpenShortcuts,
   onOpenSignature,
+  onOpenPdfTools,
+  onOpenCompressor,
+  onOpenDiff,
+  onOpenContact,
+  onOpenLicense,
 }) => {
   const { queue, lowStock, signature } = useWorkspace();
+  const { status } = useLicense();
   const pendingCount = queue.filter((j) => ['queued', 'printing', 'paused'].includes(j.status)).length;
 
   const tabs = [
@@ -121,6 +139,57 @@ export const NavTabs: React.FC<NavTabsProps> = ({
           className="btn-pop flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 ring-1 ring-white/20 text-white/90 hover:bg-white/20"
         >
           <Keyboard className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* أدوات المستندات */}
+      <div className="flex items-center gap-1.5 ps-1.5 border-s border-white/15">
+        <button
+          onClick={onOpenPdfTools}
+          title="أدوات PDF: دمج / تقسيم / ترتيب الصفحات"
+          className="btn-pop flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 ring-1 ring-white/20 text-white/90 hover:bg-white/20 text-[11px] font-bold"
+        >
+          <Files className="w-3.5 h-3.5" />
+          <span className="hidden lg:inline">دمج PDF</span>
+        </button>
+        <button
+          onClick={onOpenCompressor}
+          title="ضغط الصور لتوفير الحبر"
+          className="btn-pop flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 ring-1 ring-white/20 text-white/90 hover:bg-white/20 text-[11px] font-bold"
+        >
+          <ImageDown className="w-3.5 h-3.5" />
+          <span className="hidden lg:inline">ضغط الصور</span>
+        </button>
+        <button
+          onClick={onOpenDiff}
+          title="مقارنة A/B بين نسختي مستند"
+          className="btn-pop flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 ring-1 ring-white/20 text-white/90 hover:bg-white/20 text-[11px] font-bold"
+        >
+          <GitCompare className="w-3.5 h-3.5" />
+          <span className="hidden lg:inline">مقارنة</span>
+        </button>
+      </div>
+
+      {/* ترخيص + تواصل */}
+      <div className="flex items-center gap-1.5 ps-1.5 border-s border-white/15">
+        <button
+          onClick={onOpenLicense}
+          title="تفعيل البرنامج"
+          className={`btn-pop flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold ring-1 ${
+            status === 'activated'
+              ? 'bg-emerald-400/20 ring-emerald-300/40 text-emerald-100'
+              : 'bg-[var(--t-accent)]/20 ring-[var(--t-accent)]/40 text-white'
+          }`}
+        >
+          {status === 'activated' ? <Crown className="w-3.5 h-3.5" /> : <KeyRound className="w-3.5 h-3.5" />}
+          <span className="hidden md:inline">{status === 'activated' ? 'مُفعّل' : 'تفعيل'}</span>
+        </button>
+        <button
+          onClick={onOpenContact}
+          title="التواصل مع المطوّر"
+          className="btn-pop flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 ring-1 ring-white/20 text-white/90 hover:bg-white/20"
+        >
+          <Headphones className="w-3.5 h-3.5" />
         </button>
       </div>
 

@@ -127,8 +127,13 @@ export const ScannerTab: React.FC<ScannerTabProps> = ({
       const a = document.createElement('a');
       a.href = url;
       a.download = `WIA_Scan_${Date.now()}.pdf`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, 1500);
     });
   };
 
