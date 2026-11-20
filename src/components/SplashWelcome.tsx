@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Printer, Loader2 } from 'lucide-react';
-import { Logo3D } from './Logo';
+import { BrandLogo } from './BrandLogo';
 import { useSettings } from '../context/SettingsContext';
 
 interface SplashWelcomeProps {
@@ -50,13 +50,18 @@ export const SplashWelcome: React.FC<SplashWelcomeProps> = ({ onDone, minDuratio
       <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:22px_22px]" />
 
       <div className="relative flex flex-col items-center text-center px-6 animate-fade-up">
-        {/* اللوجو المجسم */}
-        <div className="anim-float">
-          <Logo3D size={96} />
+        {/* اللوجو الرسمي المرفق PRO SALES */}
+        <div className="anim-float relative">
+          <div className="absolute inset-0 -z-10 blur-2xl rounded-full bg-[var(--t-accent)]/25 scale-110" />
+          <BrandLogo
+            height="clamp(120px, 22vh, 230px)"
+            glow
+            className="drop-shadow-[0_18px_40px_rgba(0,0,0,.55)]"
+          />
         </div>
 
         {/* اسم البرنامج — الكلمتان جنب بعض */}
-        <div className="mt-6 flex items-baseline gap-3 font-black tracking-tight text-4xl sm:text-5xl">
+        <div className="mt-5 flex items-baseline gap-3 font-black tracking-tight text-3xl sm:text-4xl">
           <span className="text-white drop-shadow-[0_4px_18px_rgba(0,0,0,.5)]">SMART</span>
           <span
             style={{
@@ -72,7 +77,7 @@ export const SplashWelcome: React.FC<SplashWelcomeProps> = ({ onDone, minDuratio
         </div>
 
         {/* شريط التحميل */}
-        <div className="mt-8 w-64 sm:w-80">
+        <div className="mt-6 w-64 sm:w-80">
           <div className="h-1.5 w-full rounded-full bg-white/20 overflow-hidden">
             <div
               className="h-full rounded-full bg-[var(--t-accent)] shadow-[0_0_14px_rgba(var(--t-glow)/.9)] transition-all duration-100"
@@ -86,7 +91,7 @@ export const SplashWelcome: React.FC<SplashWelcomeProps> = ({ onDone, minDuratio
         </div>
 
         {/* المطوّر */}
-        <div className="mt-10 flex flex-col items-center gap-1 text-[11px] text-white/45">
+        <div className="mt-8 flex flex-col items-center gap-1 text-[11px] text-white/45">
           <div className="flex items-center gap-1.5">
             <Printer className="w-3 h-3" />
             <span className="font-mono">SMART PRINT v1.0.0 · .NET 8 WPF</span>

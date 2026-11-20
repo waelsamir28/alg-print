@@ -18,6 +18,12 @@ import {
   Printer,
   Code2,
   MessageCircle,
+  Download,
+  Upload,
+  Stamp,
+  FileJson,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   useSettings,
@@ -26,25 +32,47 @@ import {
   type AppFont,
   type AppTheme,
 } from '../context/SettingsContext';
-import { Logo3D, DesktopIcon } from './Logo';
+import { DesktopIcon } from './Logo';
+import { BrandLogo } from './BrandLogo';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 interface SettingsPageProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type Tab = 'fonts' | 'themes' | 'about' | 'support';
+type Tab = 'fonts' | 'themes' | 'watermark' | 'about' | 'support';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode; hint: string }[] = [
   { id: 'fonts', label: 'نوع الخط', icon: <Type className="w-4 h-4" />, hint: 'تغيير خط البرنامج' },
-  { id: 'themes', label: 'المظهر والثيمات', icon: <Palette className="w-4 h-4" />, hint: '3 قوالب ألوان' },
+  { id: 'themes', label: 'المظهر والثيمات', icon: <Palette className="w-4 h-4" />, hint: 'قوالب + تصدير/استيراد' },
+  { id: 'watermark', label: 'العلامة المائية', icon: <Stamp className="w-4 h-4" />, hint: 'ترويسة ورقم صفحة' },
   { id: 'about', label: 'معلومات البرنامج', icon: <Info className="w-4 h-4" />, hint: 'الإصدار والمزايا' },
   { id: 'support', label: 'الدعم والتواصل', icon: <Headphones className="w-4 h-4" />, hint: 'تواصل مع المطوّر' },
 ];
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ isOpen, onClose }) => {
   const [tab, setTab] = useState<Tab>('fonts');
-  const { font, setFont, theme, setTheme, uiScale, setUiScale, resetAppearance } = useSettings();
+  const {
+    font,
+    setFont,
+    theme,
+    setTheme,
+    uiScale,
+    setUiScale,
+    resetAppearance,
+    exportThemeProfile,
+    importThemeProfile,
+  } = useSettings();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const {
+    watermark,
+    setWatermark,
+    resetWatermark,
+    signature,
+    setSignature,
+  } = useWorkspace();
+  const [toast, setToast] = useState<{ ok: boolean; message: string } | null>(null);
 
   if (!isOpen) return null;
 
@@ -243,6 +271,264 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ isOpen, onClose }) =
                     <span>130%</span>
                   </div>
                 </div>
+
+                {/* تصدير / استيراد ملف الثيم */}
+                <div className="mt-4 p-4 rounded-xl bg-white border border-gray-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileJson className="w-4 h-4 text-[var(--t-primary)]" />
+                    <h4 className="text-xs font-black text-gray-800">نقل الثيم بين الأجهزة</h4>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-3 leading-snug">
+                    صدّر إعدادات الخط والثيم وحجم الواجهة كملف JSON، ثم استوردها على جهاز آخر
+                    (ورشة / فرع آخر) بضغطة واحدة.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        const json = exportThemeProfile(
+                          `${THEME_OPTIONS.find((t) => t.id === theme)?.label ?? 'theme'}`
+                        );
+                        const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `SmartPrint-Theme-${theme}-${Date.now()}.json`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        setToast({ ok: true, message: 'تم تصدير ملف الثيم بنجاح' });
+                      }}
+                      className="btn-pop flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white btn-primary-grad shadow-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      تصدير الثيم (JSON)
+                    </button>
+
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="btn-pop flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold bg-primary-soft text-[var(--t-primary-ink)] border border-[var(--t-primary-border)]"
+                    >
+                      <Upload className="w-4 h-4" />
+                      استيراد ثيم
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/json,.json"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const res = importThemeProfile(String(reader.result ?? ''));
+                          setToast(res);
+                          setTimeout(() => setToast(null), 3200);
+                        };
+                        reader.readAsText(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </div>
+
+                  {toast && (
+                    <div
+                      className={`mt-2.5 flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold animate-fade-up ${
+                        toast.ok
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          : 'bg-red-50 text-red-700 border border-red-200'
+                      }`}
+                    >
+                      {toast.ok ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5" />
+                      )}
+                      {toast.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ============ العلامة المائية والترويسة ============ */}
+            {tab === 'watermark' && (
+              <div className="animate-fade-up">
+                <h3 className="font-black text-gray-900 text-sm mb-1">العلامة المائية والترويسة</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  تُطبع تلقائياً على كل ورقة وتظهر في المعاينة البصرية قبل الطباعة.
+                </p>
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-gray-200 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Stamp className="w-4 h-4 text-[var(--t-primary)]" />
+                    <div>
+                      <div className="text-xs font-bold text-gray-800">تفعيل العلامة المائية</div>
+                      <div className="text-[10px] text-gray-500">تظهر أسفل/وسط كل صفحة مطبوعة</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setWatermark({ enabled: !watermark.enabled })}
+                    className={`btn-pop w-11 h-6 rounded-full relative transition-colors ${
+                      watermark.enabled ? 'bg-[var(--t-primary)]' : 'bg-gray-300'
+                    }`}
+                    title={watermark.enabled ? 'إيقاف' : 'تفعيل'}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                        watermark.enabled ? 'right-0.5' : 'right-[22px]'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className={`space-y-3 ${watermark.enabled ? '' : 'opacity-50 pointer-events-none'}`}>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">نص العلامة</label>
+                    <input
+                      value={watermark.text}
+                      onChange={(e) => setWatermark({ text: e.target.value })}
+                      className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
+                      placeholder="مثال: م/ وائل الجمال"
+                    />
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {['م/ وائل الجمال', '01222355769', 'نسخة غير قابلة للتداول', 'PRO SALES', 'مسودة'].map(
+                        (t) => (
+                          <button
+                            key={t}
+                            onClick={() => setWatermark({ text: t })}
+                            className="btn-pop px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-semibold text-gray-600 hover:border-[var(--t-primary-border)]"
+                          >
+                            {t}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">الموضع</label>
+                      <select
+                        value={watermark.position}
+                        onChange={(e) =>
+                          setWatermark({ position: e.target.value as typeof watermark.position })
+                        }
+                        className="w-full bg-gray-50 border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]"
+                      >
+                        <option value="diagonal">مائل بالمنتصف (الأشهر)</option>
+                        <option value="center">وسط أفقي</option>
+                        <option value="bottom">أسفل الصفحة</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        الشفافية — {Math.round((1 - watermark.opacity) * 100)}% وضوح
+                      </label>
+                      <input
+                        type="range"
+                        min={0.05}
+                        max={0.5}
+                        step={0.01}
+                        value={watermark.opacity}
+                        onChange={(e) => setWatermark({ opacity: parseFloat(e.target.value) })}
+                        className="w-full accent-[var(--t-primary)] cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      حجم الخط — {watermark.fontSize}px
+                    </label>
+                    <input
+                      type="range"
+                      min={9}
+                      max={30}
+                      step={1}
+                      value={watermark.fontSize}
+                      onChange={(e) => setWatermark({ fontSize: parseInt(e.target.value) })}
+                      className="w-full accent-[var(--t-primary)] cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { key: 'showLogo' as const, label: 'ترويسة اللوجو PRO SALES', value: watermark.showLogo },
+                      { key: 'showPageNumber' as const, label: 'رقم الصفحة', value: watermark.showPageNumber },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() => setWatermark({ [opt.key]: !opt.value })}
+                        className={`btn-pop flex items-center gap-2 p-2.5 rounded-xl border text-[11px] font-bold ${
+                          opt.value
+                            ? 'bg-primary-soft border-[var(--t-primary-border)] text-[var(--t-primary-ink)]'
+                            : 'bg-white border-gray-200 text-gray-500'
+                        }`}
+                      >
+                        <span
+                          className={`w-4 h-4 rounded flex items-center justify-center border-2 ${
+                            opt.value
+                              ? 'bg-[var(--t-primary)] border-[var(--t-primary)] text-white'
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          {opt.value && <Check className="w-2.5 h-2.5" strokeWidth={4} />}
+                        </span>
+                        {opt.label}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setSignature(signature ? null : signature)}
+                      disabled
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* معاينة حية */}
+                  <div>
+                    <div className="text-[10px] font-bold text-gray-500 mb-1">معاينة الورقة</div>
+                    <div className="relative w-full h-48 rounded-xl bg-slate-800 p-3 flex items-center justify-center overflow-hidden">
+                      <div className="relative w-32 h-44 bg-white rounded-sm shadow-xl p-2 overflow-hidden">
+                        <div className="space-y-1 mt-4">
+                          <div className="h-1 bg-gray-200 rounded w-full" />
+                          <div className="h-1 bg-gray-200 rounded w-5/6" />
+                          <div className="h-1 bg-gray-200 rounded w-4/5" />
+                          <div className="h-1 bg-gray-200 rounded w-full" />
+                          <div className="h-1 bg-gray-200 rounded w-2/3" />
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                          <span
+                            className={`font-black tracking-widest text-gray-900 whitespace-nowrap ${
+                              watermark.position === 'diagonal' ? '-rotate-[24deg]' : ''
+                            }`}
+                            style={{ opacity: watermark.opacity, fontSize: watermark.fontSize * 0.55 }}
+                          >
+                            {watermark.text || '—'}
+                          </span>
+                        </div>
+                        {watermark.showLogo && (
+                          <div className="absolute top-1 left-1 text-[5px] font-black text-gray-400">
+                            PRO SALES
+                          </div>
+                        )}
+                        {watermark.showPageNumber && (
+                          <div className="absolute bottom-0.5 left-0 right-0 text-center text-[5px] font-mono text-gray-400">
+                            صفحة 1
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={resetWatermark}
+                    className="btn-pop text-[11px] font-bold text-gray-500 hover:text-red-600 flex items-center gap-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    استعادة القيم الافتراضية
+                  </button>
+                </div>
               </div>
             )}
 
@@ -250,7 +536,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ isOpen, onClose }) =
             {tab === 'about' && (
               <div className="animate-fade-up">
                 <div className="hdr-grad rounded-xl p-4 flex items-center gap-4 mb-4">
-                  <Logo3D size={54} />
+                  <div className="shrink-0 anim-float">
+                    <BrandLogo height={56} glow />
+                  </div>
                   <div className="text-white">
                     <div className="flex items-baseline gap-1.5 font-black text-lg">
                       <span>SMART</span>

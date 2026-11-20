@@ -11,9 +11,12 @@ import {
   ZoomOut,
   Camera,
   Layers,
-  Settings2
+  Settings2,
+  ScanText,
+  PenTool
 } from 'lucide-react';
 import { SectionHeader, HeaderBadge } from './SectionHeader';
+import { OcrModal } from './OcrModal';
 import { ScannerDevice, ScannedPage, PrinterInfo, PaperTray } from '../types';
 
 interface ScannerTabProps {
@@ -23,6 +26,8 @@ interface ScannerTabProps {
   printer: PrinterInfo;
   tray: PaperTray;
   onInstantCopyPrint: (copies: number, scannedImage: string) => void;
+  onOpenOcr?: () => void;
+  onOpenSignature: () => void;
 }
 
 export const ScannerTab: React.FC<ScannerTabProps> = ({
@@ -32,6 +37,8 @@ export const ScannerTab: React.FC<ScannerTabProps> = ({
   printer,
   tray,
   onInstantCopyPrint,
+  onOpenOcr,
+  onOpenSignature,
 }) => {
   // Scanner settings state
   const [source, setSource] = useState<'flatbed' | 'adf_simplex' | 'adf_duplex'>('flatbed');
@@ -55,6 +62,7 @@ export const ScannerTab: React.FC<ScannerTabProps> = ({
   ]);
   const [activePageIndex, setActivePageIndex] = useState<number>(0);
   const [previewZoom, setPreviewZoom] = useState<number>(1);
+  const [isOcrOpen, setIsOcrOpen] = useState<boolean>(false);
 
   // Camera integration
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
@@ -346,6 +354,31 @@ export const ScannerTab: React.FC<ScannerTabProps> = ({
             <span className="text-[10px] text-gray-400 font-mono">Hi-Res Image</span>
           </button>
 
+          {/* 5+6. OCR + التوقيع الإلكتروني */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                setIsOcrOpen(true);
+                onOpenOcr?.();
+              }}
+              disabled={isScanning}
+              className="btn-pop flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold bg-primary-soft hover:bg-[var(--t-primary-soft-2)] text-[var(--t-primary-ink)] border border-[var(--t-primary-border)]"
+              title="التعرف الضوئي على الحروف العربية"
+            >
+              <ScanText className="w-4 h-4" />
+              نص من الصورة (OCR)
+            </button>
+            <button
+              onClick={onOpenSignature}
+              disabled={isScanning}
+              className="btn-pop flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-300"
+              title="رسم وإرفاق توقيع إلكتروني"
+            >
+              <PenTool className="w-4 h-4" />
+              توقيع إلكتروني
+            </button>
+          </div>
+
           {/* 4. Highlighted Instant Copy Button (آلة التصوير الفوري بضغطة واحدة) */}
           <div className="p-3 bg-primary-soft border border-[var(--t-primary-border)] rounded-xl mt-3">
             <div className="flex items-center justify-between mb-2">
@@ -566,6 +599,14 @@ export const ScannerTab: React.FC<ScannerTabProps> = ({
         </div>
         </div>
     </div>
+
+      {/* نافذة OCR بصفحات الاسكانر الحقيقية */}
+      <OcrModal
+        isOpen={isOcrOpen}
+        onClose={() => setIsOcrOpen(false)}
+        pages={scannedPages}
+        defaultTemplate={selectedDocTemplate}
+      />
     </div>
   );
 };

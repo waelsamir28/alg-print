@@ -9,7 +9,7 @@ import {
   ZoomOut,
   Printer,
 } from 'lucide-react';
-import { Logo3D } from './Logo';
+import { BrandLogo } from './BrandLogo';
 import { useSettings } from '../context/SettingsContext';
 
 interface TitleBarProps {
@@ -118,13 +118,33 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           <span className="hidden xl:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 ring-1 ring-white/20 text-[10px] font-bold text-white/70 whitespace-nowrap">
             HP PageWide Pro
           </span>
-          <Logo3D size={42} wordmark />
+
+          {/* لوجو PRO SALES + اسم البرنامج كلمتين جنب بعض */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <BrandLogo height="clamp(34px, 3.8vw, 54px)" compact glow className="anim-float shrink-0" />
+            <div className="leading-none text-left hidden sm:block">
+              <div className="flex items-baseline gap-1.5 font-black tracking-tight text-lg sm:text-xl">
+                <span className="text-white drop-shadow-[0_2px_2px_rgba(0,0,0,.45)]">SMART</span>
+                <span
+                  style={{
+                    color: 'var(--t-accent)',
+                    textShadow: '0 2px 8px rgba(var(--t-glow) / .55), 0 1px 0 rgba(0,0,0,.35)',
+                  }}
+                >
+                  PRINT
+                </span>
+              </div>
+              <div className="mt-1 text-[10px] font-semibold tracking-wide text-white/65">
+                للطباعة المتقدمة
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* شريط سفلي رقيق داخل الهيدر */}
       <div className="px-4 pb-1.5 -mt-0.5 flex items-center justify-end gap-2 text-[10px] text-white/40 font-mono">
-        <span>SMART PRINT · Advanced Printing Suite · إدارة الطباعة المتقدمة والاسكانر</span>
+        <span>PRO SALES · SMART PRINT · للطباعة المتقدمة والاسكانر</span>
         <Printer className="w-3 h-3" />
       </div>
     </header>

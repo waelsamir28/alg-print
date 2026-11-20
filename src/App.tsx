@@ -7,6 +7,12 @@ import { ScannerTab } from './components/ScannerTab';
 import { PrintProgressModal } from './components/PrintProgressModal';
 import { CodeExplorerModal } from './components/CodeExplorerModal';
 import { SettingsPage } from './components/SettingsPage';
+import { PrintQueue } from './components/PrintQueue';
+import { StockPanel } from './components/StockPanel';
+import { SignaturePad } from './components/SignaturePad';
+import { ShortcutsPanel } from './components/ShortcutsPanel';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useWorkspace } from './context/WorkspaceContext';
 import { InstallerWizard } from './components/InstallerWizard';
 import { SplashWelcome } from './components/SplashWelcome';
 import { useSettings } from './context/SettingsContext';
@@ -27,7 +33,8 @@ import {
 } from './types';
 
 export function App() {
-  const { installed, setInstalled, uiScale } = useSettings();
+  const { installed, setInstalled, uiScale, zoomIn, zoomOut, resetZoom } = useSettings();
+  const { activeJob, enqueueJob, watermark } = useWorkspace();
 
   // شاشات التثبيت والترحيب
   const [showSplash, setShowSplash] = useState<boolean>(false);
@@ -39,6 +46,10 @@ export function App() {
   const [isCodeExplorerOpen, setIsCodeExplorerOpen] = useState<boolean>(false);
   const [isPrintProgressOpen, setIsPrintProgressOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isQueueOpen, setIsQueueOpen] = useState<boolean>(false);
+  const [isStockOpen, setIsStockOpen] = useState<boolean>(false);
+  const [isSignatureOpen, setIsSignatureOpen] = useState<boolean>(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
 
   // Batch Print Jobs queue
   const [jobs, setJobs] = useState<PrintJobItem[]>([
@@ -200,6 +211,54 @@ export function App() {
     setIsPrintProgressOpen(true);
   };
 
+  /** إرسال المهمة إلى طابور الطباعة الرسمي */
+  const handleEnqueuePrint = () => {
+    enqueueJob({
+      title:
+        jobs.length === 1
+          ? jobs[0].name
+          : `دفعة طباعة — ${jobs.length} ملفات (${jobs[0]?.name ?? ''}...)`,
+      files: jobs.length,
+      sheets: totalPhysicalSheets,
+      copies,
+      printerName: selectedPrinter.name.split('(')[0].trim(),
+      trayName: selectedTray.name,
+      isColor: colorMode === 'color',
+      duplex: duplexMode !== 'simplex',
+    });
+    setIsPrintProgressOpen(true);
+  };
+
+  // اختصارات لوحة المفاتيح
+  useKeyboardShortcuts({
+    enabled: installed && !showSplash,
+    onPrint: () => {
+      if (jobs.length > 0) handleEnqueuePrint();
+    },
+    onAddFiles: () => {
+      const input = document.querySelector<HTMLInputElement>('input[type="file"][multiple]');
+      input?.click();
+    },
+    onSettings: () => setIsSettingsOpen(true),
+    onHelp: () => setIsShortcutsOpen(true),
+    onQueue: () => setIsQueueOpen(true),
+    onStock: () => setIsStockOpen(true),
+    onSignature: () => setIsSignatureOpen(true),
+    onZoomIn: zoomIn,
+    onZoomOut: zoomOut,
+    onZoomReset: resetZoom,
+    onTabChange: setActiveTab,
+    onScannerTab: () => setActiveTab('scanner'),
+    onEscape: () => {
+      setIsSettingsOpen(false);
+      setIsQueueOpen(false);
+      setIsStockOpen(false);
+      setIsSignatureOpen(false);
+      setIsShortcutsOpen(false);
+      setIsPrintProgressOpen(false);
+    },
+  });
+
   // Calculations for StatusBar & Progress
   const totalPages = jobs.reduce((sum, j) => sum + j.pageCount, 0);
   const pagesPerSheet = layout === '2-up' ? 2 : layout === '4-up' ? 4 : layout === 'booklet' ? 4 : 1;
@@ -252,7 +311,16 @@ export function App() {
       />
 
       {/* 2. الأزرار أسفل الهيدر: طباعة / الاسكانر */}
-      <NavTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <NavTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        activeJobLabel={activeJob?.title}
+        activeJobProgress={activeJob ? Math.round(activeJob.progress) : undefined}
+        onOpenQueue={() => setIsQueueOpen(true)}
+        onOpenStock={() => setIsStockOpen(true)}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        onOpenSignature={() => setIsSignatureOpen(true)}
+      />
 
       {/* 3. Main Content Viewport */}
       <main
@@ -300,7 +368,7 @@ export function App() {
             onApplyEcoPreset={handleApplyEcoPreset}
             onApplyBookletPreset={handleApplyBookletPreset}
             onApplyHighQualityPreset={handleApplyHighQualityPreset}
-            onStartPrint={() => setIsPrintProgressOpen(true)}
+            onStartPrint={handleEnqueuePrint}
             activePresetId={activePresetId}
           />
         ) : (
@@ -311,12 +379,14 @@ export function App() {
             printer={selectedPrinter}
             tray={selectedTray}
             onInstantCopyPrint={handleInstantCopyPrint}
+            onOpenSignature={() => setIsSignatureOpen(true)}
           />
         )}
       </main>
 
       {/* 4. فوتر غامق */}
       <FooterBar
+        watermarkLabel={watermark.enabled ? watermark.text : undefined}
         printer={selectedPrinter}
         tray={selectedTray}
         totalJobs={jobs.length}
@@ -344,8 +414,22 @@ export function App() {
         onClose={() => setIsCodeExplorerOpen(false)}
       />
 
-      {/* 6. صفحة إعدادات البرنامج (خطوط / ثيمات / معلومات / دعم) */}
+      {/* 6. صفحة إعدادات البرنامج (خطوط / ثيمات / علامة مائية / معلومات / دعم) */}
       <SettingsPage isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
+      {/* 7. طابور الطباعة */}
+      <PrintQueue isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
+
+      {/* 8. المخزون والأحبار */}
+      <StockPanel isOpen={isStockOpen} onClose={() => setIsStockOpen(false)} />
+
+      {/* 9. التوقيع الإلكتروني */}
+      <SignaturePad isOpen={isSignatureOpen} onClose={() => setIsSignatureOpen(false)} />
+
+      {/* 10. لوحة الاختصارات */}
+      <ShortcutsPanel isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+
+
     </div>
   );
 }
