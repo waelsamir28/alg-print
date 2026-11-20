@@ -7,6 +7,11 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using SmartPrint.Models;
 using Xceed.Words.NET;
+using Brushes = System.Windows.Media.Brushes;
+using Color = System.Windows.Media.Color;
+using FlowDirection = System.Windows.FlowDirection;
+using Pen = System.Windows.Media.Pen;
+using Point = System.Windows.Point;
 
 namespace SmartPrint.Services
 {
