@@ -177,7 +177,6 @@ namespace SmartPrint.Services
             InputBin.Tractor => "علوي (Tractor)",
             InputBin.Cassette => "درج كاسيت (Cassette)",
             InputBin.AutoSheetFeeder => "وحدة تغذية تلقائية",
-            InputBin.ForcedTray => "درج إجباري",
             _ => bin.ToString()
         };
 

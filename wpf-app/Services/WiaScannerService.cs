@@ -284,7 +284,7 @@ namespace SmartPrint.Services
                 enc.Save(ms);
                 ms.Position = 0;
 
-                using var img = PdfSharpCore.Drawing.XImage.FromStream(ms);
+                using var img = PdfSharpCore.Drawing.XImage.FromStream(() => ms);
 
                 double scale = Math.Min(595.0 / page.PixelWidth, 842.0 / page.PixelHeight);
                 double w = page.PixelWidth * scale;
