@@ -6,11 +6,17 @@
         Height="880" Width="1400"
         MinHeight="700" MinWidth="1100"
         WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="CanResizeWithGrip"
         FlowDirection="RightToLeft"
         FontFamily="{StaticResource ArabicFont}"
         Background="{StaticResource SurfaceBgBrush}"
         AllowDrop="True" Drop="OnWindowDrop" DragOver="OnWindowDragOver"
         Closing="OnWindowClosing">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="56" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
 
     <Window.DataContext>
         <vm:MainViewModel/>
