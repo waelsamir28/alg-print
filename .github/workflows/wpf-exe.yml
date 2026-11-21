@@ -76,6 +76,24 @@ jobs:
           path: SMART_PRINT_v1.0.0_win-x64.zip
           retention-days: 90
 
+      - name: Build Windows Installer (Inno Setup)
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) {
+            choco install innosetup -y --no-progress
+          }
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "iscc" }
+          & $iscc wpf-app/installer.iss
+          Get-ChildItem ./installer-out/*.exe | Format-List Name, Length
+
+      - name: Upload Installer EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMART-PRINT-INSTALLER
+          path: installer-out/SMART_PRINT_Setup_v1.0.0.exe
+          retention-days: 90
+
       - name: Attach to Release (on tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
