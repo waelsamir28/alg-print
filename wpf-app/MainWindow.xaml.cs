@@ -3,6 +3,7 @@ using SmartPrint.ViewModels;
 using DataFormats = System.Windows.DataFormats;
 using DragDropEffects = System.Windows.DragDropEffects;
 using DragEventArgs = System.Windows.DragEventArgs;
+using MessageBox = System.Windows.MessageBox;
 
 namespace SmartPrint
 {

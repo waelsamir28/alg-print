@@ -108,7 +108,7 @@ namespace SmartPrint.ViewModels
             get => _copiesText;
             set
             {
-                if (!Set(ref _copiesText, value)) return;
+                if (!SetProperty(ref _copiesText, value)) return;
                 CopiesCount = int.TryParse(value, out var n) && n > 0 ? Math.Min(999, n) : 1;
             }
         }
@@ -119,7 +119,7 @@ namespace SmartPrint.ViewModels
             get => _copyCopiesText;
             set
             {
-                if (!Set(ref _copyCopiesText, value)) return;
+                if (!SetProperty(ref _copyCopiesText, value)) return;
                 CopyCopiesCount = int.TryParse(value, out var n) && n > 0 ? Math.Min(999, n) : 1;
             }
         }
