@@ -183,11 +183,11 @@
                                                 <TextBlock Text="{Binding FileName}" FontSize="11.5"
                                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}">
-                                                    <Run Text="{Binding DocumentType}"/>
+                                                    <Run Text="{Binding DocumentType, Mode=OneWay}"/>
                                                     <Run Text=" · "/>
-                                                    <Run Text="{Binding PagesText}"/>
+                                                    <Run Text="{Binding PagesText, Mode=OneWay}"/>
                                                     <Run Text=" · "/>
-                                                    <Run Text="{Binding FileSizeFormatted}"/>
+                                                    <Run Text="{Binding FileSizeFormatted, Mode=OneWay}"/>
                                                 </TextBlock>
                                             </StackPanel>
                                             <Border Grid.Column="1" Background="#DCFCE7" CornerRadius="4"
@@ -511,7 +511,7 @@
                                           DisplayMemberPath="Name"/>
                                 <TextBlock FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0">
                                     <Run Text="المصادر: "/>
-                                    <Run Text="{Binding SelectedScanner.SourceText}"/>
+                                    <Run Text="{Binding SelectedScanner.SourceText, Mode=OneWay}"/>
                                 </TextBlock>
 
                                 <TextBlock Text="مصدر الورق" Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
