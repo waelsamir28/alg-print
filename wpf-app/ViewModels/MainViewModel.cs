@@ -850,8 +850,8 @@ namespace SmartPrint.ViewModels
         {
             var target = item ?? SelectedJob;
             if (target == null) return;
-            var idx = Jobs.IndexOf(target);
-            if (idx > 0) Jobs.Move(idx, idx - 1);
+            var idx = PrintJobsList.IndexOf(target);
+            if (idx > 0) PrintJobsList.Move(idx, idx - 1);
         }
 
         [RelayCommand]
@@ -859,14 +859,14 @@ namespace SmartPrint.ViewModels
         {
             var target = item ?? SelectedJob;
             if (target == null) return;
-            var idx = Jobs.IndexOf(target);
-            if (idx >= 0 && idx < Jobs.Count - 1) Jobs.Move(idx, idx + 1);
+            var idx = PrintJobsList.IndexOf(target);
+            if (idx >= 0 && idx < PrintJobsList.Count - 1) PrintJobsList.Move(idx, idx + 1);
         }
 
         [RelayCommand]
         private void MergePdf()
         {
-            var pdfs = Jobs.Where(j => j.FilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)).ToList();
+            var pdfs = PrintJobsList.Where(j => j.FilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)).ToList();
             if (pdfs.Count < 2)
             {
                 MessageBox.Show("أضف ملفين PDF على الأقل لدمجهما.", "دمج PDF", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -923,13 +923,13 @@ namespace SmartPrint.ViewModels
         [RelayCommand]
         private void CompareDocuments()
         {
-            if (Jobs.Count < 2)
+            if (PrintJobsList.Count < 2)
             {
                 MessageBox.Show("أضف ملفين على الأقل لمقارنتهما (A/B Diff).", "مقارنة المستندات (Ctrl+D)", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
-            var a = Jobs[0];
-            var b = Jobs[1];
+            var a = PrintJobsList[0];
+            var b = PrintJobsList[1];
             var fa = new FileInfo(a.FilePath);
             var fb = new FileInfo(b.FilePath);
             var msg = $"مقارنة النسختين (A / B):\n\n" +
@@ -943,7 +943,7 @@ namespace SmartPrint.ViewModels
         [RelayCommand]
         private void CompressImages()
         {
-            var imgs = Jobs.Where(j => j.FilePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+            var imgs = PrintJobsList.Where(j => j.FilePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
                                     || j.FilePath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
                                     || j.FilePath.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
                                     || j.FilePath.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase)).ToList();
