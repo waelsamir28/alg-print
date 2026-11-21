@@ -781,6 +781,199 @@ namespace SmartPrint.ViewModels
                 result?.Success == true ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
 
+        /* ==================== الثيمات والخطوط وأدوات PDF والصور ==================== */
+
+        public IReadOnlyList<Choice> ThemeChoices { get; } = new[]
+        {
+            new Choice("navy", "الكحلي الافتراضي"),
+            new Choice("amber", "الكهرماني / البرتقالي"),
+            new Choice("aqua", "السماوي المائي"),
+            new Choice("petroleum", "الأزرق البترولي")
+        };
+
+        public IReadOnlyList<Choice> FontChoices { get; } = new[]
+        {
+            new Choice("Tahoma", "Tahoma (افتراضي)"),
+            new Choice("Cairo", "Cairo"),
+            new Choice("Noto Kufi Arabic", "Noto Kufi Arabic")
+        };
+
+        private string _selectedTheme = "navy";
+        public string SelectedTheme
+        {
+            get => _selectedTheme;
+            set
+            {
+                if (!SetProperty(ref _selectedTheme, value)) return;
+                ApplyTheme(value);
+            }
+        }
+
+        private string _selectedFont = "Tahoma";
+        public string SelectedFont
+        {
+            get => _selectedFont;
+            set
+            {
+                if (!SetProperty(ref _selectedFont, value)) return;
+                try
+                {
+                    Application.Current.Resources["ArabicFont"] = new System.Windows.Media.FontFamily(value);
+                }
+                catch { }
+            }
+        }
+
+        private static void ApplyTheme(string theme)
+        {
+            try
+            {
+                var (c1, c2, accent) = theme switch
+                {
+                    "amber" => ("#7C2D12", "#C2410C", "#EA580C"),
+                    "aqua" => ("#0C4A6E", "#0284C7", "#0EA5E9"),
+                    "petroleum" => ("#0F3D4C", "#115E59", "#0D9488"),
+                    _ => ("#0A192F", "#162C4E", "#1D9BF0")
+                };
+                var b1 = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(c1);
+                var b2 = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(c2);
+                var ba = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(accent);
+                Application.Current.Resources["HeaderGradient"] = new System.Windows.Media.LinearGradientBrush(b1, b2, 0);
+                Application.Current.Resources["PrimaryBrush"] = new System.Windows.Media.SolidColorBrush(ba);
+                Application.Current.Resources["NavyDarkBrush"] = new System.Windows.Media.SolidColorBrush(b1);
+            }
+            catch { }
+        }
+
+        [RelayCommand]
+        private void MoveJobUp(PrintJobItem? item)
+        {
+            var target = item ?? SelectedJob;
+            if (target == null) return;
+            var idx = Jobs.IndexOf(target);
+            if (idx > 0) Jobs.Move(idx, idx - 1);
+        }
+
+        [RelayCommand]
+        private void MoveJobDown(PrintJobItem? item)
+        {
+            var target = item ?? SelectedJob;
+            if (target == null) return;
+            var idx = Jobs.IndexOf(target);
+            if (idx >= 0 && idx < Jobs.Count - 1) Jobs.Move(idx, idx + 1);
+        }
+
+        [RelayCommand]
+        private void MergePdf()
+        {
+            var pdfs = Jobs.Where(j => j.FilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (pdfs.Count < 2)
+            {
+                MessageBox.Show("أضف ملفين PDF على الأقل لدمجهما.", "دمج PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var dlg = new SaveFileDialog { Filter = "PDF|*.pdf", FileName = $"Merged_{DateTime.Now:yyyyMMdd_HHmm}.pdf" };
+            if (dlg.ShowDialog() != true) return;
+            try
+            {
+                using var outDoc = new PdfSharpCore.Pdf.PdfDocument();
+                foreach (var j in pdfs)
+                {
+                    using var inDoc = PdfSharpCore.Pdf.IO.PdfReader.Open(j.FilePath, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.Import);
+                    for (int i = 0; i < inDoc.PageCount; i++) outDoc.AddPage(inDoc.Pages[i]);
+                }
+                outDoc.Save(dlg.FileName);
+                ProcessDroppedFiles(new[] { dlg.FileName });
+                MessageBox.Show($"تم دمج {pdfs.Count} ملفات بنجاح.", "دمج PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"تعذر الدمج: {ex.Message}", "دمج PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private void SplitPdf()
+        {
+            if (SelectedJob == null || !SelectedJob.FilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("اختر ملف PDF أولاً لتقسيمه.", "تقسيم PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var dlg = new System.Windows.Forms.FolderBrowserDialog { Description = "اختر مجلد حفظ الصفحات المقسمة" };
+            if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+            try
+            {
+                using var inDoc = PdfSharpCore.Pdf.IO.PdfReader.Open(SelectedJob.FilePath, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.Import);
+                var baseName = Path.GetFileNameWithoutExtension(SelectedJob.FilePath);
+                for (int i = 0; i < inDoc.PageCount; i++)
+                {
+                    using var single = new PdfSharpCore.Pdf.PdfDocument();
+                    single.AddPage(inDoc.Pages[i]);
+                    single.Save(Path.Combine(dlg.SelectedPath, $"{baseName}_page_{i + 1}.pdf"));
+                }
+                MessageBox.Show($"تم تقسيم الملف إلى {inDoc.PageCount} صفحة.", "تقسيم PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"تعذر التقسيم: {ex.Message}", "تقسيم PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private void CompareDocuments()
+        {
+            if (Jobs.Count < 2)
+            {
+                MessageBox.Show("أضف ملفين على الأقل لمقارنتهما (A/B Diff).", "مقارنة المستندات (Ctrl+D)", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var a = Jobs[0];
+            var b = Jobs[1];
+            var fa = new FileInfo(a.FilePath);
+            var fb = new FileInfo(b.FilePath);
+            var msg = $"مقارنة النسختين (A / B):\n\n" +
+                      $"• النسخة A: {a.FileName}\n  الصفحات: {a.PageCount} | الحجم: {fa.Length / 1024.0:F1} KB\n\n" +
+                      $"• النسخة B: {b.FileName}\n  الصفحات: {b.PageCount} | الحجم: {fb.Length / 1024.0:F1} KB\n\n" +
+                      $"الفرق في الصفحات: {Math.Abs(a.PageCount - b.PageCount)} صفحة\n" +
+                      $"الفرق في الحجم: {Math.Abs(fa.Length - fb.Length) / 1024.0:F1} KB";
+            MessageBox.Show(msg, "SMART PRINT — مقارنة A/B Diff", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        [RelayCommand]
+        private void CompressImages()
+        {
+            var imgs = Jobs.Where(j => j.FilePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                                    || j.FilePath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                                    || j.FilePath.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+                                    || j.FilePath.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (imgs.Count == 0)
+            {
+                MessageBox.Show("أضف صوراً أولاً لضغطها وتوفير الحبر.", "ضغط الصور (Ctrl+Shift+I)", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            int count = 0;
+            foreach (var img in imgs)
+            {
+                try
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.UriSource = new Uri(img.FilePath);
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+                    var enc = new JpegBitmapEncoder { QualityLevel = 70 };
+                    enc.Frames.Add(BitmapFrame.Create(bmp));
+                    var outPath = Path.Combine(Path.GetDirectoryName(img.FilePath)!, Path.GetFileNameWithoutExtension(img.FilePath) + "_eco.jpg");
+                    using var fs = File.Create(outPath);
+                    enc.Save(fs);
+                    count++;
+                }
+                catch { }
+            }
+            MessageBox.Show($"تم ضغط {count} صورة بنجاح لتوفير الحبر (جودة 70%).", "ضغط الصور", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         /* ==================== تنظيف ==================== */
 
         public void Dispose()

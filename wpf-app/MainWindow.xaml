@@ -22,6 +22,12 @@
         <vm:MainViewModel/>
     </Window.DataContext>
 
+    <Window.InputBindings>
+        <KeyBinding Key="D" Modifiers="Control" Command="{Binding CompareDocumentsCommand}"/>
+        <KeyBinding Key="I" Modifiers="Control+Shift" Command="{Binding CompressImagesCommand}"/>
+        <KeyBinding Key="M" Modifiers="Control" Command="{Binding MergePdfCommand}"/>
+    </Window.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- الهيدر -->
