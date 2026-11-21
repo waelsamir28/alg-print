@@ -248,6 +248,39 @@
                                 <Button Grid.Column="6" Content="مسح الكل"
                                         Command="{Binding ClearAllCommand}" Style="{StaticResource SecondaryButton}" Padding="4,6" FontSize="10"/>
                             </Grid>
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="5"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="دمج PDF" ToolTip="Ctrl+M"
+                                        Command="{Binding MergePdfCommand}" Style="{StaticResource SecondaryButton}" Padding="4,6" FontSize="10.5"/>
+                                <Button Grid.Column="2" Content="تقسيم PDF"
+                                        Command="{Binding SplitPdfCommand}" Style="{StaticResource SecondaryButton}" Padding="4,6" FontSize="10.5"/>
+                            </Grid>
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="5"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="مقارنة A/B" ToolTip="Ctrl+D"
+                                        Command="{Binding CompareDocumentsCommand}" Style="{StaticResource SecondaryButton}" Padding="4,6" FontSize="10.5"/>
+                                <Button Grid.Column="2" Content="ضغط الصور" ToolTip="Ctrl+Shift+I"
+                                        Command="{Binding CompressImagesCommand}" Style="{StaticResource SecondaryButton}" Padding="4,6" FontSize="10.5"/>
+                            </Grid>
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="5"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0" ItemsSource="{Binding ThemeChoices}" SelectedValue="{Binding SelectedTheme}"
+                                          SelectedValuePath="Key" DisplayMemberPath="Value" FontSize="10.5" Padding="6,5" ToolTip="الثيم"/>
+                                <ComboBox Grid.Column="2" ItemsSource="{Binding FontChoices}" SelectedValue="{Binding SelectedFont}"
+                                          SelectedValuePath="Key" DisplayMemberPath="Value" FontSize="10.5" Padding="6,5" ToolTip="الخط"/>
+                            </Grid>
                         </StackPanel>
                     </Grid>
                 </Border>
